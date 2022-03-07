@@ -92,7 +92,7 @@ static speed_t serial_baud_lookup(long baud)
    * If a non-standard BAUD rate is used, issue
    * a warning (if we are verbose) and return the raw rate
    */
-  avrdude_message(MSG_NOTICE, "%s: serial_baud_lookup(): Using non-standard baud rate: %ld",
+  avrdude_message(MSG_NOTICE, "%s: serial_baud_lookup(): Using non-standard baud rate: %ld\n",
               progname, baud);
 
   return baud;
@@ -199,9 +199,14 @@ static int ser_setparams(union filedescriptor *fd, long baud, unsigned long cfla
 
   rc = tcsetattr(fd->ifd, TCSANOW, &termios);
   if (rc < 0) {
-    avrdude_message(MSG_INFO, "%s: ser_setparams(): tcsetattr() failed\n",
+    // Try custom baudrate (MacOS only)
+    #define IOSSIOSPEED 0x80045402
+    speed = baud;
+    if(ioctl(fd->ifd, IOSSIOSPEED, &speed) < 0) {
+      avrdude_message(MSG_INFO, "%s: ser_setparams(): tcsetattr()/ioctrl() failed\n",
             progname);
     return -errno;
+    }
   }
 
   tcflush(fd->ifd, TCIFLUSH);
