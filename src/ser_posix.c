@@ -200,7 +200,9 @@ static int ser_setparams(union filedescriptor *fd, long baud, unsigned long cfla
   rc = tcsetattr(fd->ifd, TCSANOW, &termios);
   if (rc < 0) {
     // Try custom baudrate (MacOS only)
-    #define IOSSIOSPEED 0x80045402
+    #ifndef IOSSIOSPEED
+    #define IOSSIOSPEED _IOW('T', 2, speed_t)
+    #endif
     speed = baud;
     if(ioctl(fd->ifd, IOSSIOSPEED, &speed) < 0) {
       avrdude_message(MSG_INFO, "%s: ser_setparams(): tcsetattr()/ioctrl() failed\n",
