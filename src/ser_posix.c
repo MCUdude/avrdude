@@ -202,7 +202,11 @@ static int ser_setparams(union filedescriptor *fd, long baud, unsigned long cfla
   // Try custom baudrate (MacOS only)
 #ifdef __APPLE__
     #ifndef IOSSIOSPEED
-      #define IOSSIOSPEED _IOW('T', 2, speed_t)
+      #ifdef _IOW
+        #define IOSSIOSPEED _IOW('T', 2, speed_t)
+      #else
+        #define IOSSIOSPEED 0x80045402
+      #endif
     #endif
     speed = baud;
     if(ioctl(fd->ifd, IOSSIOSPEED, &speed) < 0) {
