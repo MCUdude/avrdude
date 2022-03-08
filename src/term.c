@@ -378,6 +378,7 @@ static int cmd_write(PROGRAMMER * pgm, struct avrpart * p,
     if (*end_ptr || (end_ptr == argv[3])) {
       avrdude_message(MSG_INFO, "%s (write ...): can't parse address \"%s\"\n",
             progname, argv[3]);
+      free(buf);
       return -1;
     }
   } else {
@@ -388,6 +389,10 @@ static int cmd_write(PROGRAMMER * pgm, struct avrpart * p,
 
   // Structure related to data that is being written to memory
   struct Data {
+    // String info
+    char str[0x4000];
+    uint8_t str_status;
+    uint32_t str_length;
     // Data info
     int32_t bytes_grown;
     uint8_t size;
@@ -399,7 +404,8 @@ static int cmd_write(PROGRAMMER * pgm, struct avrpart * p,
       int64_t ll;
       uint8_t a[8];
     };
-  } data = {.bytes_grown = 0, .size = 0, .is_float = false, .ll = 0, .is_signed = false};
+  } data;
+  memset(&data, 0x00, sizeof(data));
 
   for (i = start_offset; i < len + start_offset; i++) {
     data.is_float = false;
@@ -407,91 +413,134 @@ static int cmd_write(PROGRAMMER * pgm, struct avrpart * p,
 
     // Handle the next argument
     if (i < argc - start_offset + 3) {
-      // Get suffix if present
-      char suffix  = argv[i][strlen(argv[i]) - 1];
-      char lsuffix = argv[i][strlen(argv[i]) - 2];
-      if ((suffix == 'L' && lsuffix == 'L') || (suffix == 'l' && lsuffix == 'l')) {
-        argv[i][strlen(argv[i]) - 2] = '\0';
-        data.size = 8;
-      } else if (suffix == 'L' || suffix == 'l') {
-        argv[i][strlen(argv[i]) - 1] = '\0';
-        data.size = 4;
-      } else if ((suffix == 'F' || suffix == 'f') &&
-          strncmp(argv[i], "0x", 2) != 0 && strncmp(argv[i], "-0x", 3) != 0) {
-        argv[i][strlen(argv[i]) - 1] = '\0';
-        data.size = 4;
-      } else if ((suffix == 'H' && lsuffix == 'H') || (suffix == 'h' && lsuffix == 'h')) {
-        argv[i][strlen(argv[i]) - 2] = '\0';
-        data.size = 1;
-      } else if (suffix == 'H' || suffix == 'h' || suffix == 'S' || suffix == 's') {
-        argv[i][strlen(argv[i]) - 1] = '\0';
-        data.size = 2;
-      } else if (suffix == '\'') {
-        data.size = 1;
+      // Argument started with a quote (") character. Start string handling
+      if (argv[i][0] == '"' && data.str_status == STR_NONE) {
+        data.str_status = STR_START;
+        data.str_length = 0;
       }
 
-      // Try integers
-      data.ll = strtoll(argv[i], &end_ptr, 0);
-      if (*end_ptr || (end_ptr == argv[i])) {
-        // Try float
-        data.f = strtof(argv[i], &end_ptr);
-        data.is_float = true;
+      // Argument ended with a quote (") character. End string handling
+      if (argv[i][strlen(argv[i]) - 1] == '"') {
+        data.str_status = STR_COMPLETE;
+      }
+
+      // Handle integers, floats and characters if not in string handling mode
+      if (data.str_status == STR_NONE) {
+        // Get suffix if present
+        char suffix  = argv[i][strlen(argv[i]) - 1];
+        char lsuffix = argv[i][strlen(argv[i]) - 2];
+        if ((suffix == 'L' && lsuffix == 'L') || (suffix == 'l' && lsuffix == 'l')) {
+          argv[i][strlen(argv[i]) - 2] = '\0';
+          data.size = 8;
+        } else if (suffix == 'L' || suffix == 'l') {
+          argv[i][strlen(argv[i]) - 1] = '\0';
+          data.size = 4;
+        } else if ((suffix == 'F' || suffix == 'f') &&
+            strncmp(argv[i], "0x", 2) != 0 && strncmp(argv[i], "-0x", 3) != 0) {
+          argv[i][strlen(argv[i]) - 1] = '\0';
+          data.size = 4;
+        } else if ((suffix == 'H' && lsuffix == 'H') || (suffix == 'h' && lsuffix == 'h')) {
+          argv[i][strlen(argv[i]) - 2] = '\0';
+          data.size = 1;
+        } else if (suffix == 'H' || suffix == 'h' || suffix == 'S' || suffix == 's') {
+          argv[i][strlen(argv[i]) - 1] = '\0';
+          data.size = 2;
+        } else if (suffix == '\'') {
+          data.size = 1;
+        }
+
+        // Try integers
+        data.ll = strtoll(argv[i], &end_ptr, 0);
         if (*end_ptr || (end_ptr == argv[i])) {
-          data.is_float = false;
-          // Try single character
-          if (argv[i][0] == '\'' && argv[i][2] == '\'') {
-            data.ll = argv[i][1];
-          } else {
-            avrdude_message(MSG_INFO, "\n%s (write): can't parse data \"%s\"\n",
-                  progname, argv[i]);
-            free(buf);
-            return -1;
+          // Try float
+          data.f = strtof(argv[i], &end_ptr);
+          data.is_float = true;
+          if (*end_ptr || (end_ptr == argv[i])) {
+            data.is_float = false;
+            // Try single character
+            if (argv[i][0] == '\'' && argv[i][2] == '\'') {
+              data.ll = argv[i][1];
+            } else {
+              avrdude_message(MSG_INFO, "\n%s (write): can't parse data \"%s\"\n",
+                    progname, argv[i]);
+              free(buf);
+              return -1;
+            }
           }
         }
+
+        // Print warning if data size might be ambiguous
+        bool is_hex       = (strncmp(argv[i], "0x",  2) == 0);
+        bool is_neg_hex   = (strncmp(argv[i], "-0x", 3) == 0);
+        bool leading_zero = (strncmp(argv[i], "0x0", 3) == 0);
+        int8_t hex_digits = (strlen(argv[i]) - 2);
+        if(!data.size                                                                      // No pre-defined size
+          && (is_neg_hex                                                                   // Hex with - sign in front
+          || (is_hex && leading_zero && (hex_digits & (hex_digits - 1)))                   // Hex with 3, 5, 6 or 7 digits
+          || (!is_hex && !data.is_float && llabs(data.ll) > 0xFF && strlen(argv[i]) > 2))) // Base10 int greater than 255
+        {
+          avrdude_message(MSG_INFO, "Warning: no size suffix specified for \"%s\". "
+                                    "Writing %d byte(s)\n",
+                                    argv[i],
+                                    llabs(data.ll) > UINT32_MAX ? 8 :
+                                    llabs(data.ll) > UINT16_MAX || data.is_float ? 4 : \
+                                    llabs(data.ll) > UINT8_MAX ? 2 : 1);
+        }
+        // Flag if signed integer and adjust size
+        if (data.ll < 0 && !data.is_float) {
+          data.is_signed = true;
+          if (data.ll < INT32_MIN)
+            data.size = 8;
+          else if (data.ll < INT16_MIN)
+            data.size = 4;
+          else if (data.ll < INT8_MIN)
+            data.size = 2;
+          else
+            data.size = 1;
+        }
+      }
+    }
+
+    // Write strings to buffer
+    if(data.str_status == STR_START || data.str_status == STR_COMPLETE) {
+      uint16_t j = 0;
+      while(argv[i][j]) {
+        // Strip the first quote (") character in the string
+        if(data.str_status == STR_START && data.str_length == 0)
+          j++;
+        // Strip the last quote (") character in the string
+        else if(data.str_status == STR_COMPLETE && j == (strlen(argv[i]) - 1))
+          break;
+
+        data.str[data.str_length] = argv[i][j++];
+        buf[i - start_offset + data.bytes_grown++] = data.str[data.str_length];
+        data.str_length++;
+      }
+      // Add spaces between arguments in a string
+      if(data.str_status != STR_COMPLETE) {
+        data.str[data.str_length] = ' ';
+        buf[i - start_offset + data.bytes_grown] = data.str[data.str_length];
+      // Clear all string related variables when done handing a string
+      } else {
+        data.str_status = STR_NONE;
+        data.str_length = 0;
       }
 
-      // Print warning if data size might be ambiguous
-      bool is_hex       = (strncmp(argv[i], "0x",  2) == 0);
-      bool is_neg_hex   = (strncmp(argv[i], "-0x", 3) == 0);
-      bool leading_zero = (strncmp(argv[i], "0x0", 3) == 0);
-      int8_t hex_digits = (strlen(argv[i]) - 2);
-      if(!data.size                                                                      // No pre-defined size
-        && (is_neg_hex                                                                   // Hex with - sign in front
-        || (is_hex && leading_zero && (hex_digits & (hex_digits - 1)))                   // Hex with 3, 5, 6 or 7 digits
-        || (!is_hex && !data.is_float && llabs(data.ll) > 0xFF && strlen(argv[i]) > 2))) // Base10 int greater than 255
-      {
-        avrdude_message(MSG_INFO, "Warning: no size suffix specified for \"%s\". "
-                                  "Writing %d byte(s)\n",
-                                  argv[i],
-                                  llabs(data.ll) > UINT32_MAX ? 8 :
-                                  llabs(data.ll) > UINT16_MAX || data.is_float ? 4 : \
-                                  llabs(data.ll) > UINT8_MAX ? 2 : 1);
+    // Write data from union to buffer
+    } else {
+      buf[i - start_offset + data.bytes_grown]     = data.a[0];
+      if (llabs(data.ll) > 0x000000FF || data.size >= 2 || data.is_float)
+        buf[i - start_offset + ++data.bytes_grown] = data.a[1];
+      if (llabs(data.ll) > 0x0000FFFF || data.size >= 4 || data.is_float) {
+        buf[i - start_offset + ++data.bytes_grown] = data.a[2];
+        buf[i - start_offset + ++data.bytes_grown] = data.a[3];
       }
-      // Flag if signed integer and adjust size
-      if (data.ll < 0 && !data.is_float) {
-        data.is_signed = true;
-        if (data.ll < INT32_MIN)
-          data.size = 8;
-        else if (data.ll < INT16_MIN)
-          data.size = 4;
-        else if (data.ll < INT8_MIN)
-          data.size = 2;
-        else
-          data.size = 1;
+      if (llabs(data.ll) > 0xFFFFFFFF || data.size == 8) {
+        buf[i - start_offset + ++data.bytes_grown] = data.a[4];
+        buf[i - start_offset + ++data.bytes_grown] = data.a[5];
+        buf[i - start_offset + ++data.bytes_grown] = data.a[6];
+        buf[i - start_offset + ++data.bytes_grown] = data.a[7];
       }
-    }
-    buf[i - start_offset + data.bytes_grown]     = data.a[0];
-    if (llabs(data.ll) > 0x000000FF || data.size >= 2 || data.is_float)
-      buf[i - start_offset + ++data.bytes_grown] = data.a[1];
-    if (llabs(data.ll) > 0x0000FFFF || data.size >= 4 || data.is_float) {
-      buf[i - start_offset + ++data.bytes_grown] = data.a[2];
-      buf[i - start_offset + ++data.bytes_grown] = data.a[3];
-    }
-    if (llabs(data.ll) > 0xFFFFFFFF || data.size == 8) {
-      buf[i - start_offset + ++data.bytes_grown] = data.a[4];
-      buf[i - start_offset + ++data.bytes_grown] = data.a[5];
-      buf[i - start_offset + ++data.bytes_grown] = data.a[6];
-      buf[i - start_offset + ++data.bytes_grown] = data.a[7];
     }
   }
 
@@ -503,6 +552,15 @@ static int cmd_write(PROGRAMMER * pgm, struct avrpart * p,
     avrdude_message(MSG_INFO, "%s (write): selected address and # bytes exceed "
                     "range for %s memory\n",
                     progname, memtype);
+    free(buf);
+    return -1;
+  }
+
+  if (data.str_status != STR_NONE) {
+    avrdude_message(MSG_INFO, "%s (write): input string not terminated with "
+                    "end quote (\") character\n",
+                    progname);
+    free(buf);
     return -1;
   }
 

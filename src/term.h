@@ -32,6 +32,12 @@ typedef enum {
   WRITE_MODE_FILL     = 1,
 } mode;
 
+typedef enum {
+  STR_NONE     = 0,
+  STR_START    = 1,
+  STR_COMPLETE = 2,
+} str_stat;
+
 int terminal_mode(PROGRAMMER * pgm, struct avrpart * p);
 char * terminal_get_input(const char *prompt);
 
