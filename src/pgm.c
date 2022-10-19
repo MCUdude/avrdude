@@ -39,7 +39,7 @@ static void pgm_default_6(const PROGRAMMER *, const char *);
 
 
 static int pgm_default_open(PROGRAMMER *pgm, const char *name) {
-  avrdude_message(MSG_INFO, "\n%s: programmer does not support open()", progname);
+  pmsg_error("programmer does not support open()");
   return -1;
 }
 
@@ -122,6 +122,7 @@ PROGRAMMER *pgm_new(void) {
   pgm->read_byte_cached = avr_read_byte_cached;
   pgm->write_byte_cached = avr_write_byte_cached;
   pgm->chip_erase_cached = avr_chip_erase_cached;
+  pgm->page_erase_cached = avr_page_erase_cached;
   pgm->flush_cache    = avr_flush_cache;
   pgm->reset_cache = avr_reset_cache;
 
@@ -219,7 +220,7 @@ PROGRAMMER *pgm_dup(const PROGRAMMER *src) {
 
 
 static void pgm_default(void) {
-  avrdude_message(MSG_INFO, "%s: programmer operation not supported\n", progname);
+  pmsg_error("programmer operation not supported\n");
 }
 
 
@@ -250,8 +251,8 @@ static void pgm_default_6 (const PROGRAMMER *pgm, const char *p) {
 
 
 void programmer_display(PROGRAMMER *pgm, const char * p) {
-  avrdude_message(MSG_INFO, "%sProgrammer Type : %s\n", p, pgm->type);
-  avrdude_message(MSG_INFO, "%sDescription     : %s\n", p, pgm->desc);
+  msg_info("%sProgrammer Type : %s\n", p, pgm->type);
+  msg_info("%sDescription     : %s\n", p, pgm->desc);
 
   pgm->display(pgm, p);
 }
@@ -259,25 +260,25 @@ void programmer_display(PROGRAMMER *pgm, const char * p) {
 
 void pgm_display_generic_mask(const PROGRAMMER *pgm, const char *p, unsigned int show) {
   if(show & (1<<PPI_AVR_VCC)) 
-    avrdude_message(MSG_INFO, "%s  VCC     = %s\n", p, pins_to_str(&pgm->pin[PPI_AVR_VCC]));
+    msg_info("%s  VCC     = %s\n", p, pins_to_str(&pgm->pin[PPI_AVR_VCC]));
   if(show & (1<<PPI_AVR_BUFF))
-    avrdude_message(MSG_INFO, "%s  BUFF    = %s\n", p, pins_to_str(&pgm->pin[PPI_AVR_BUFF]));
+    msg_info("%s  BUFF    = %s\n", p, pins_to_str(&pgm->pin[PPI_AVR_BUFF]));
   if(show & (1<<PIN_AVR_RESET))
-    avrdude_message(MSG_INFO, "%s  RESET   = %s\n", p, pins_to_str(&pgm->pin[PIN_AVR_RESET]));
+    msg_info("%s  RESET   = %s\n", p, pins_to_str(&pgm->pin[PIN_AVR_RESET]));
   if(show & (1<<PIN_AVR_SCK))
-    avrdude_message(MSG_INFO, "%s  SCK     = %s\n", p, pins_to_str(&pgm->pin[PIN_AVR_SCK]));
+    msg_info("%s  SCK     = %s\n", p, pins_to_str(&pgm->pin[PIN_AVR_SCK]));
   if(show & (1<<PIN_AVR_MOSI))
-    avrdude_message(MSG_INFO, "%s  MOSI    = %s\n", p, pins_to_str(&pgm->pin[PIN_AVR_MOSI]));
+    msg_info("%s  MOSI    = %s\n", p, pins_to_str(&pgm->pin[PIN_AVR_MOSI]));
   if(show & (1<<PIN_AVR_MISO))
-    avrdude_message(MSG_INFO, "%s  MISO    = %s\n", p, pins_to_str(&pgm->pin[PIN_AVR_MISO]));
+    msg_info("%s  MISO    = %s\n", p, pins_to_str(&pgm->pin[PIN_AVR_MISO]));
   if(show & (1<<PIN_LED_ERR))
-    avrdude_message(MSG_INFO, "%s  ERR LED = %s\n", p, pins_to_str(&pgm->pin[PIN_LED_ERR]));
+    msg_info("%s  ERR LED = %s\n", p, pins_to_str(&pgm->pin[PIN_LED_ERR]));
   if(show & (1<<PIN_LED_RDY))
-    avrdude_message(MSG_INFO, "%s  RDY LED = %s\n", p, pins_to_str(&pgm->pin[PIN_LED_RDY]));
+    msg_info("%s  RDY LED = %s\n", p, pins_to_str(&pgm->pin[PIN_LED_RDY]));
   if(show & (1<<PIN_LED_PGM))
-    avrdude_message(MSG_INFO, "%s  PGM LED = %s\n", p, pins_to_str(&pgm->pin[PIN_LED_PGM]));
+    msg_info("%s  PGM LED = %s\n", p, pins_to_str(&pgm->pin[PIN_LED_PGM]));
   if(show & (1<<PIN_LED_VFY))
-    avrdude_message(MSG_INFO, "%s  VFY LED = %s\n", p, pins_to_str(&pgm->pin[PIN_LED_VFY]));
+    msg_info("%s  VFY LED = %s\n", p, pins_to_str(&pgm->pin[PIN_LED_VFY]));
 }
 
 void pgm_display_generic(const PROGRAMMER *pgm, const char *p) {
