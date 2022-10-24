@@ -798,6 +798,11 @@ retry:
   // attempt to read the status back
   status = stk500v2_recv(pgm,buf,maxlen);
 
+  DEBUG("STK500V2: sstk500v2_command() received content: [ ");
+  for (size_t i=0; i<len; i++)
+     DEBUG("0x%02x ",buf[i]);
+  DEBUG("], length %d\n", (int) len);
+
   // if we got a successful readback, return
   if (status > 0) {
     DEBUG(" = %d\n",status);
