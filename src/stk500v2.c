@@ -868,6 +868,9 @@ retry:
             pmsg_error("command failed\n");
         } else if (buf[1] == STATUS_CMD_UNKNOWN) {
             pmsg_error("unknown command\n");
+        } else if (buf[1] == STATUS_CLOCK_ERROR) {
+            pmsg_error("target clock speed error\n");
+            return -2;
         } else {
             pmsg_error("unknown status 0x%02x\n", buf[1]);
         }
