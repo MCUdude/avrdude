@@ -798,6 +798,12 @@ retry:
   // attempt to read the status back
   status = stk500v2_recv(pgm,buf,maxlen);
 
+/*
+  msg_info("STK500V2: sstk500v2_command() received content: [ ");
+  for (size_t i=0; i<len; i++)
+     msg_info("0x%02x ",buf[i]);
+  msg_info("], length %d\n", (int) len);
+*/
   // if we got a successful readback, return
   if (status > 0) {
     DEBUG(" = %d\n",status);
@@ -1269,9 +1275,9 @@ static int stk500v2_jtag3_initialize(const PROGRAMMER *pgm, const AVRPART *p) {
   unsigned char parm[4], *resp;
   LNODEID ln;
   AVRMEM * m;
-
+  pmsg_info("stk500v2_jtag3_initialize() start\n");
   // FIXME: condition below looks fishy, suspect the code wants !(p->prog_modes & (PM_debugWIRE | PM_JTAG | PM_JTAGmkI /* | PM_XMEGAJTAG | PM_AVR32JTAG */))
-  if (p->prog_modes & (PM_PDI | PM_TPI)) {
+  if (p->prog_modes & (PM_PDI)) {
     pmsg_error("part %s has no ISP interface\n", p->desc);
     return -1;
   }
@@ -1506,11 +1512,12 @@ static void stk500hvsp_disable(const PROGRAMMER *pgm) {
 
 static void stk500v2_enable(PROGRAMMER *pgm, const AVRPART *p) {
   // Previously stk500v2_initialize() set up pgm
-  if(pgm->initialize == stk500v2_initialize) {
+  if(pgm->initialize == stk500v2_initialize || pgm->initialize == stk500v2_jtag3_initialize) {
     if((PDATA(pgm)->pgmtype == PGMTYPE_STK600 ||
       PDATA(pgm)->pgmtype == PGMTYPE_AVRISP_MKII ||
       PDATA(pgm)->pgmtype == PGMTYPE_JTAGICE_MKII) != 0
       && (p->prog_modes & (PM_PDI | PM_TPI)) != 0) {
+      msg_info("TPI_init\n");
       stk600_setup_xprog(pgm);
     } else {
       stk600_setup_isp(pgm);
@@ -3507,6 +3514,7 @@ static int stk500v2_jtag3_open(PROGRAMMER *pgm, const char *port) {
   mycookie = pgm->cookie;
   pgm->cookie = PDATA(pgm)->chained_pdata;
   if ((rv = jtag3_getsync(pgm, 42)) != 0) {
+  msg_info("stk500v2_jtag3_open() rv: %d\n", rv);
     if (rv != JTAGII_GETSYNC_FAIL_GRACEFUL)
         pmsg_error("unable to sync with the JTAGICE3 in ISP mode\n");
     pgm->cookie = mycookie;
