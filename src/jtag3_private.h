@@ -96,6 +96,7 @@
 #define SCOPE_GENERAL              0x01
 #define SCOPE_AVR_ISP              0x11
 #define SCOPE_AVR                  0x12
+#define SCOPE_AVR_TPI              0x14
 
 /* Info scope */
 #define CMD3_GET_INFO              0x00
