@@ -2357,6 +2357,7 @@ static void jtag3_display(const PROGRAMMER *pgm, const char *p) {
 
 
 void jtag3_print_parms1(const PROGRAMMER *pgm, const char *p, FILE *fp) {
+  /*
   unsigned char buf[3];
 
   if (jtag3_getparm(pgm, SCOPE_GENERAL, 1, PARM3_VTARGET, buf, 2) < 0)
@@ -2468,6 +2469,7 @@ void jtag3_print_parms1(const PROGRAMMER *pgm, const char *p, FILE *fp) {
   if (b2_to_u16(buf) > 0) {
     fmsg_out(fp, "%sPDI/UPDI clock Xmega/megaAVR : %u kHz\n", p, b2_to_u16(buf));
   }
+  */
 }
 
 static void jtag3_print_parms(const PROGRAMMER *pgm, FILE *fp) {
