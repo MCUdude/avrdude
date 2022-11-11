@@ -3513,13 +3513,13 @@ static int stk500v2_jtag3_open(PROGRAMMER *pgm, const char *port) {
 
   mycookie = pgm->cookie;
   pgm->cookie = PDATA(pgm)->chained_pdata;
-  if ((rv = jtag3_getsync(pgm, 42)) != 0) {
+  /*if ((rv = jtag3_getsync(pgm, 42)) != 0) {
   msg_info("stk500v2_jtag3_open() rv: %d\n", rv);
     if (rv != JTAGII_GETSYNC_FAIL_GRACEFUL)
         pmsg_error("unable to sync with the JTAGICE3 in ISP mode\n");
     pgm->cookie = mycookie;
     return -1;
-  }
+  }*/
   pgm->cookie = mycookie;
 
   PDATA(pgm)->pgmtype = PGMTYPE_JTAGICE3;
