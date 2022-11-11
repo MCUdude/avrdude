@@ -3169,7 +3169,7 @@ static void stk500v2_print_parms1(const PROGRAMMER *pgm, const char *p, FILE *fp
     fmsg_out(fp, "%sSCK period      : %.2f us\n", p,
 	    (float) 1000000 / avrispmkIIfreqs[sck_duration]);
     break;
-
+/*
   case PGMTYPE_JTAGICE3:
     {
       unsigned char cmd[4];
@@ -3183,7 +3183,7 @@ static void stk500v2_print_parms1(const PROGRAMMER *pgm, const char *p, FILE *fp
       }
     }
     break;
-
+*/
   case PGMTYPE_STK600:
     stk500v2_getparm2(pgm, PARAM2_AREF0, &varef);
     fmsg_out(fp, "%sVaref 0         : %.2f V\n", p, varef / 100.0);
