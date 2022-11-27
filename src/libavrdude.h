@@ -209,7 +209,7 @@ typedef struct opcode {
 
 #define HV_UPDI_VARIANT_0      0 /* Shared UPDI/GPIO/RESET pin, HV on UPDI pin (tinyAVR0/1/2)*/
 #define HV_UPDI_VARIANT_1      1 /* Dedicated UPDI pin, no HV (megaAVR0/AVR-Dx) */
-#define HV_UPDI_VARIANT_2      2 /* Shared UPDI pin, HV on _RESET (AVR-Ex) */
+#define HV_UPDI_VARIANT_2      2 /* Shared UPDI pin, HV on _RESET (AVR-DD/AVR-Ex) */
 
 #define AVR_FAMILYIDLEN 7
 #define AVR_SIBLEN 16
@@ -237,6 +237,8 @@ typedef struct avrpart {
   int           mcuid;              /* Unique id in 0..2039 for urclock programmer */
   int           n_interrupts;       /* Number of interrupts, used for vector bootloaders */
   int           n_page_erase;       /* If set, number of pages erased during NVM erase */
+  int           n_boot_sections;    /* Number of boot sections */
+  int           boot_section_size;  /* Size of (smallest) boot section, if any */
   int           hvupdi_variant;     /* HV pulse on UPDI pin, no pin or RESET pin */
   int           stk500_devcode;     /* stk500 device code */
   int           avr910_devcode;     /* avr910 device code */
@@ -250,56 +252,64 @@ typedef struct avrpart {
                                        this pin (PIN_AVR_*) */
   unsigned      flags;              /* see AVRPART_ masks */
 
-  int           timeout;            /* stk500 v2 xml file parameter */
-  int           stabdelay;          /* stk500 v2 xml file parameter */
-  int           cmdexedelay;        /* stk500 v2 xml file parameter */
-  int           synchloops;         /* stk500 v2 xml file parameter */
-  int           bytedelay;          /* stk500 v2 xml file parameter */
-  int           pollindex;          /* stk500 v2 xml file parameter */
-  unsigned char pollvalue;          /* stk500 v2 xml file parameter */
-  int           predelay;           /* stk500 v2 xml file parameter */
-  int           postdelay;          /* stk500 v2 xml file parameter */
-  int           pollmethod;         /* stk500 v2 xml file parameter */
+  /* STK500 v2 parameters from ATDF files */
+  int           timeout;
+  int           stabdelay;
+  int           cmdexedelay;
+  int           synchloops;
+  int           bytedelay;
+  int           pollindex;
+  unsigned char pollvalue;
+  int           predelay;
+  int           postdelay;
+  int           pollmethod;
 
   enum ctl_stack_t ctl_stack_type;  /* what to use the ctl stack for */
   unsigned char controlstack[CTL_STACK_SIZE]; /* stk500v2 PP/HVSP ctl stack */
   unsigned char flash_instr[FLASH_INSTR_SIZE]; /* flash instructions (debugWire, JTAG) */
   unsigned char eeprom_instr[EEPROM_INSTR_SIZE]; /* EEPROM instructions (debugWire, JTAG) */
 
-  int           hventerstabdelay;   /* stk500 v2 hv mode parameter */
-  int           progmodedelay;      /* stk500 v2 hv mode parameter */
-  int           latchcycles;        /* stk500 v2 hv mode parameter */
-  int           togglevtg;          /* stk500 v2 hv mode parameter */
-  int           poweroffdelay;      /* stk500 v2 hv mode parameter */
-  int           resetdelayms;       /* stk500 v2 hv mode parameter */
-  int           resetdelayus;       /* stk500 v2 hv mode parameter */
-  int           hvleavestabdelay;   /* stk500 v2 hv mode parameter */
-  int           resetdelay;         /* stk500 v2 hv mode parameter */
-  int           chiperasepulsewidth; /* stk500 v2 hv mode parameter */
-  int           chiperasepolltimeout; /* stk500 v2 hv mode parameter */
-  int           chiperasetime;      /* stk500 v2 hv mode parameter */
-  int           programfusepulsewidth; /* stk500 v2 hv mode parameter */
-  int           programfusepolltimeout; /* stk500 v2 hv mode parameter */
-  int           programlockpulsewidth; /* stk500 v2 hv mode parameter */
-  int           programlockpolltimeout; /* stk500 v2 hv mode parameter */
-  int           synchcycles;        /* stk500 v2 hv mode parameter */
-  int           hvspcmdexedelay;    /* stk500 v2 hv mode file parameter */
+  /* STK500 v2 hv mode parameters */
+  int           hventerstabdelay;
+  int           progmodedelay;
+  int           latchcycles;
+  int           togglevtg;
+  int           poweroffdelay;
+  int           resetdelayms;
+  int           resetdelayus;
+  int           hvleavestabdelay;
+  int           resetdelay;
+  int           chiperasepulsewidth;
+  int           chiperasepolltimeout;
+  int           chiperasetime;
+  int           programfusepulsewidth;
+  int           programfusepolltimeout;
+  int           programlockpulsewidth;
+  int           programlockpolltimeout;
+  int           synchcycles;
+  int           hvspcmdexedelay;
 
-  unsigned char idr;                /* JTAG ICE mkII XML file parameter */
-  unsigned char rampz;              /* JTAG ICE mkII XML file parameter */
-  unsigned char spmcr;              /* JTAG ICE mkII XML file parameter */
-  unsigned char eecr;               /* JTAC ICE mkII XML file parameter */
-  unsigned int mcu_base;            /* Base address of MCU control block in ATxmega devices */
-  unsigned int nvm_base;            /* Base address of NVM controller in ATxmega devices */
-  unsigned int ocd_base;            /* Base address of OCD module in AVR8X/UPDI devices */
-  int           ocdrev;             /* OCD revision (JTAGICE3 parameter, from AS6 XML files) */
 
-  OPCODE      * op[AVR_OP_MAX];     /* opcodes */
+  /* debugWIRE and/or JTAG ICE mkII XML file parameters */
+  unsigned char idr;            /* I/O address of IDR (OCD) reg */
+  unsigned char rampz;          /* I/O address of RAMPZ reg */
+  unsigned char spmcr;          /* memory address of SPMCR reg */
+  unsigned char eecr;           /* memory address of EECR reg */
+  unsigned char eind;           /* memory address of EIND reg */
+  unsigned int mcu_base;        /* Base address of MCU control block in ATxmega devices */
+  unsigned int nvm_base;        /* Base address of NVM controller in ATxmega devices */
+  unsigned int ocd_base;        /* Base address of OCD module in AVR8X/UPDI devices */
+  int           ocdrev;         /* OCD revision (JTAGICE3 parameter, from AS6 XML files) */
 
-  LISTID        mem;                /* avr memory definitions */
-  LISTID        mem_alias;          /* memory alias definitions */
-  const char  * config_file;        /* config file where defined */
-  int           lineno;             /* config file line number */
+  /* Bootloader paramater */
+  unsigned char autobaud_sync;  /* Sync byte for bootloader autobaud,  must be <= 0x30 */
+
+  OPCODE      * op[AVR_OP_MAX]; /* opcodes */
+
+  LISTID        mem;            /* avr memory definitions */
+  LISTID        mem_alias;      /* memory alias definitions */
+  const char  * config_file;    /* config file where defined */
+  int           lineno;         /* config file line number */
 } AVRPART;
 
 typedef struct avrmem {
@@ -401,8 +411,8 @@ enum {
   PPI_AVR_BUFF,
   PIN_AVR_RESET,
   PIN_AVR_SCK,
-  PIN_AVR_MOSI,
-  PIN_AVR_MISO,
+  PIN_AVR_SDO,
+  PIN_AVR_SDI,
   PIN_LED_ERR,
   PIN_LED_RDY,
   PIN_LED_PGM,
@@ -579,7 +589,9 @@ const char * pinmask_to_str(const pinmask_t * const pinmask);
 
    The target file will be selected at configure time. */
 
-extern long serial_recv_timeout;
+extern long serial_recv_timeout;  /* ms */
+extern long serial_drain_timeout; /* ms */
+
 union filedescriptor
 {
   int ifd;
@@ -797,7 +809,7 @@ typedef struct programmer_t {
   int  (*parseextparams) (const struct programmer_t *pgm, const LISTID xparams);
   void (*setup)          (struct programmer_t *pgm);
   void (*teardown)       (struct programmer_t *pgm);
-
+  int  (*flash_readhook) (const struct programmer_t *pgm, const AVRPART *p, const AVRMEM *flm, const char *fname, int size);
   // Cached r/w API for terminal reads/writes
   int (*write_byte_cached)(const struct programmer_t *pgm, const AVRPART *p, const AVRMEM *m,
                           unsigned long addr, unsigned char value);
@@ -806,6 +818,8 @@ typedef struct programmer_t {
   int (*chip_erase_cached)(const struct programmer_t *pgm, const AVRPART *p);
   int (*page_erase_cached)(const struct programmer_t *pgm, const AVRPART *p, const AVRMEM *m,
                           unsigned int baseaddr);
+  int (*readonly)        (const struct programmer_t *pgm, const AVRPART *p, const AVRMEM *m,
+                          unsigned int addr);
   int (*flush_cache)     (const struct programmer_t *pgm, const AVRPART *p);
   int (*reset_cache)     (const struct programmer_t *pgm, const AVRPART *p);
   AVR_Cache *cp_flash, *cp_eeprom;
@@ -826,10 +840,10 @@ void         pgm_free(PROGRAMMER *p);
 
 void programmer_display(PROGRAMMER * pgm, const char * p);
 
-/* show is a mask like this (1<<PIN_AVR_SCK)|(1<<PIN_AVR_MOSI)| ... */
+/* show is a mask like this (1<<PIN_AVR_SCK)|(1<<PIN_AVR_SDO)| ... */
 #define SHOW_ALL_PINS (~0u)
 #define SHOW_PPI_PINS ((1<<PPI_AVR_VCC)|(1<<PPI_AVR_BUFF))
-#define SHOW_AVR_PINS ((1<<PIN_AVR_RESET)|(1<<PIN_AVR_SCK)|(1<<PIN_AVR_MOSI)|(1<<PIN_AVR_MISO))
+#define SHOW_AVR_PINS ((1<<PIN_AVR_RESET)|(1<<PIN_AVR_SCK)|(1<<PIN_AVR_SDO)|(1<<PIN_AVR_SDI))
 #define SHOW_LED_PINS ((1<<PIN_LED_ERR)|(1<<PIN_LED_RDY)|(1<<PIN_LED_PGM)|(1<<PIN_LED_VFY))
 void pgm_display_generic_mask(const PROGRAMMER *pgm, const char *p, unsigned int show);
 void pgm_display_generic(const PROGRAMMER *pgm, const char *p);
@@ -873,6 +887,12 @@ int avr_read(const PROGRAMMER * pgm, const AVRPART *p, const char *memtype, cons
 int avr_write_page(const PROGRAMMER *pgm, const AVRPART *p, const AVRMEM *mem,
                    unsigned long addr);
 
+unsigned long avr_ustimestamp();
+
+unsigned long avr_mstimestamp();
+
+double avr_timestamp();
+
 int avr_write_byte(const PROGRAMMER *pgm, const AVRPART *p, const AVRMEM *mem,
                    unsigned long addr, unsigned char data);
 
@@ -885,7 +905,7 @@ int avr_write(const PROGRAMMER *pgm, const AVRPART *p, const char *memtype, int 
 
 int avr_signature(const PROGRAMMER *pgm, const AVRPART *p);
 
-int avr_verify(const AVRPART * p, const AVRPART * v, const char * memtype, int size);
+int avr_verify(const PROGRAMMER *pgm, const AVRPART *p, const AVRPART *v, const char *m, int size);
 
 int avr_get_cycle_count(const PROGRAMMER *pgm, const AVRPART *p, int *cycles);
 
@@ -893,7 +913,11 @@ int avr_put_cycle_count(const PROGRAMMER *pgm, const AVRPART *p, int cycles);
 
 void avr_add_mem_order(const char *str);
 
+int avr_memtype_is_flash_type(const char *mem);
+
 int avr_mem_is_flash_type(const AVRMEM *mem);
+
+int avr_memtype_is_eeprom_type(const char *mem);
 
 int avr_mem_is_eeprom_type(const AVRMEM *mem);
 
@@ -918,7 +942,7 @@ int avr_write_page_default(const PROGRAMMER *pgm, const AVRPART *p, const AVRMEM
 
 int avr_is_and(const unsigned char *s1, const unsigned char *s2, const unsigned char *s3, size_t n);
 
-// byte-wise cached read/write API
+// Bytewise cached read/write API
 int avr_read_byte_cached(const PROGRAMMER *pgm, const AVRPART *p, const AVRMEM *mem, unsigned long addr, unsigned char *value);
 int avr_write_byte_cached(const PROGRAMMER *pgm, const AVRPART *p, const AVRMEM *mem, unsigned long addr, unsigned char data);
 int avr_chip_erase_cached(const PROGRAMMER *pgm, const AVRPART *p);
@@ -969,8 +993,8 @@ char * fileio_fmtstr(FILEFMT format);
 
 int fileio_fmt_autodetect(const char * fname);
 
-int fileio(int oprwv, char * filename, FILEFMT format,
-           struct avrpart * p, char * memtype, int size);
+int fileio(int oprwv, const char *filename, FILEFMT format,
+      const AVRPART *p, const char *memtype, int size);
 
 #ifdef __cplusplus
 }
@@ -1020,10 +1044,10 @@ extern UPDATE * dup_update(UPDATE * upd);
 extern UPDATE * new_update(int op, char * memtype, int filefmt,
 			   char * filename);
 extern void free_update(UPDATE * upd);
-extern int do_op(PROGRAMMER * pgm, struct avrpart * p, UPDATE * upd,
-		 enum updateflags flags);
+extern int do_op(const PROGRAMMER *pgm, const AVRPART *p, UPDATE *upd,
+             enum updateflags flags);
 
-extern int memstats(struct avrpart *p, char *memtype, int size, Filestats *fsp);
+extern int memstats(const AVRPART *p, const char *memtype, int size, Filestats *fsp);
 
 // Convenience functions for printing
 const char *update_plural(int x);
@@ -1036,7 +1060,7 @@ int update_is_okfile(const char *fn);
 int update_is_writeable(const char *fn);
 int update_is_readable(const char *fn);
 
-int update_dryrun(struct avrpart *p, UPDATE *upd);
+int update_dryrun(const AVRPART *p, UPDATE *upd);
 
 
 #ifdef __cplusplus

@@ -16,11 +16,14 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef developer_opts_h
-#define developer_opts_h
+/* $Id$ */
 
-void dev_output_pgm_part(int dev_opt_c, const char *programmer, int dev_opt_p, const char *partdesc);
-void dev_output_part_defs(char *partdesc);
-void dev_output_pgm_defs(char *programmer);
+#ifndef urclock_h__
+#define urclock_h__
+
+extern const char urclock_desc[];
+void urclock_initpgm (PROGRAMMER *pgm);
 
 #endif
+
+

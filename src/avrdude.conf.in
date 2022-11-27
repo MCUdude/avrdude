@@ -29,8 +29,8 @@
 #       buff     = <pin1> [, <pin2> ... ] ;       # pin number(s)
 #       reset    = <pin> ;                        # pin number
 #       sck      = <pin> ;                        # pin number
-#       mosi     = <pin> ;                        # pin number
-#       miso     = <pin> ;                        # pin number
+#       sdo      = <pin> ;                        # pin number
+#       sdi      = <pin> ;                        # pin number
 #       errled   = <pin> ;                        # pin number
 #       rdyled   = <pin> ;                        # pin number
 #       pgmled   = <pin> ;                        # pin number
@@ -71,7 +71,9 @@
 #       prog_modes       = PM_<i/f> {| PM_<i/f>}  # interfaces, eg, PM_SPM|PM_ISP|PM_HVPP|PM_debugWIRE
 #       mcuid            = <num>;                 # unique id in 0..2039 for 8-bit AVRs
 #       n_interrupts     = <num>;                 # number of interrupts, used for vector bootloaders
-#       n_page_erase     = <num>;                 # if set, number of pages erased during NVM erase
+#       n_page_erase     = <num>;                 # if set, number of pages erased during SPM erase
+#       n_boot_sections  = <num>;                 # Number of boot sections
+#       boot_section_size = <num>;                # Size of (smallest) boot section, if any
 #       hvupdi_variant   = <num> ;                # numeric -1 (n/a) or 0..2
 #       devicecode       = <num> ;                # deprecated, use stk500_devcode
 #       stk500_devcode   = <num> ;                # numeric
@@ -128,19 +130,22 @@
 #       programfusepolltimeout = <num> ;
 #       programlockpulsewidth = <num> ;           # PP only
 #       programlockpolltimeout = <num> ;
-#       # JTAG ICE mkII parameters, also from ATDF files
+#       # debugWIRE and/or JTAG ICE mkII parameters, also from ATDF files
 #       allowfullpagebitstream = <yes/no> ;
 #       enablepageprogramming = <yes/no> ;
 #       idr              = <num> ;                # IO addr of IDR (OCD) reg
 #       rampz            = <num> ;                # IO addr of RAMPZ reg
 #       spmcr            = <num> ;                # mem addr of SPMC[S]R reg
 #       eecr             = <num> ;                # mem addr of EECR reg only when != 0x3f
+#       eind             = <num> ;                # mem addr of EIND reg
 #       mcu_base         = <num> ;
 #       nvm_base         = <num> ;
 #       ocd_base         = <num> ;
 #       ocdrev           = <num> ;
 #       pgm_enable       = <instruction format> ;
 #       chip_erase       = <instruction format> ;
+#       # parameters for bootloaders
+#       autobaud_sync    = <num> ;                # autobaud detection byte, default 0x30
 #
 #       memory <memtype>
 #           paged           = <yes/no> ;          # yes/no (flash only, do not use for EEPROM)
@@ -173,12 +178,13 @@
 #
 # If any of the above parameters are not specified, the default value
 # of 0 is used for numerics (except for mcuid, hvupdi_variant and
-# ocdrev, where the default value is -1) or the empty string "" for
-# string values. If a required parameter is left empty, AVRDUDE will
-# complain. Almost all occurrences of numbers (with the exception of
-# pin numbers and where they are separated by space, eg, in signature
-# and readback) can also be given as simple expressions involving
-# arithemtic and bitwise operators.
+# ocdrev, where the default value is -1, and for autobaud_sync which
+# defaults to 0x30), or the empty string "" for string values. If a
+# required parameter is left empty, AVRDUDE will complain. Almost all
+# occurrences of numbers (with the exception of pin numbers and where
+# they are separated by space, eg, in signature and readback) can also
+# be given as simple expressions involving arithemtic and bitwise
+# operators.
 #
 # Parts can also inherit parameters from previously defined parts
 # using the following syntax. In this case specified integer and
@@ -411,8 +417,8 @@ programmer
     vcc                    = 2, 3, 4, 5;
     reset                  = 7;
     sck                    = 8;
-    mosi                   = 9;
-    miso                   = 10;
+    sdo                    = 9;
+    sdi                    = 10;
 ;
 
 #------------------------------------------------------------
@@ -427,8 +433,8 @@ programmer
     buff                   = 4, 5;
     reset                  = 9;
     sck                    = 6;
-    mosi                   = 7;
-    miso                   = 10;
+    sdo                    = 7;
+    sdi                    = 10;
 ;
 
 #------------------------------------------------------------
@@ -457,8 +463,8 @@ programmer
     prog_modes             = PM_TPI | PM_ISP;
     reset                  = 4;
     sck                    = 5;
-    mosi                   = 2;
-    miso                   = 11;
+    sdo                    = 2;
+    sdi                    = 11;
 ;
 
 #------------------------------------------------------------
@@ -483,8 +489,8 @@ programmer
     buff                   = 6;
     reset                  = 7;
     sck                    = 8;
-    mosi                   = 9;
-    miso                   = 10;
+    sdo                    = 9;
+    sdi                    = 10;
     errled                 = 1;
     rdyled                 = 14;
     pgmled                 = 16;
@@ -503,8 +509,8 @@ programmer
     vcc                    = 4, 5, 6, 7, 8;
     reset                  = 3;
     sck                    = 2;
-    mosi                   = 9;
-    miso                   = 11;
+    sdo                    = 9;
+    sdi                    = 11;
 ;
 
 #------------------------------------------------------------
@@ -518,8 +524,8 @@ programmer
     prog_modes             = PM_TPI | PM_ISP;
     reset                  = 2;
     sck                    = 3;
-    mosi                   = 4;
-    miso                   = 13;
+    sdo                    = 4;
+    sdi                    = 13;
 ;
 
 #------------------------------------------------------------
@@ -533,8 +539,8 @@ programmer
     prog_modes             = PM_TPI | PM_ISP;
     reset                  = 4;
     sck                    = 3;
-    mosi                   = 2;
-    miso                   = 10;
+    sdo                    = 2;
+    sdi                    = 10;
 ;
 
 #------------------------------------------------------------
@@ -548,8 +554,8 @@ programmer
     prog_modes             = PM_TPI | PM_ISP;
     reset                  = 3;
     sck                    = 2;
-    mosi                   = 1;
-    miso                   = 10;
+    sdo                    = 1;
+    sdi                    = 10;
 ;
 
 #------------------------------------------------------------
@@ -561,7 +567,7 @@ programmer
 # the programming circuit) but is necessary to switch one of the
 # buffer lines (trying to add it to the "buff" lines doesn't work in
 # avrdude versions before 5.5j).
-# With this, TMS connects to RESET, TDI to MOSI, TDO to MISO and TCK
+# With this, TMS connects to RESET, TDI to SDO, TDO to SDI and TCK
 # to SCK (plus vcc/gnd of course)
 
 programmer
@@ -573,8 +579,8 @@ programmer
     buff                   = 5;
     reset                  = 4;
     sck                    = 3;
-    mosi                   = 2;
-    miso                   = 13;
+    sdo                    = 2;
+    sdi                    = 13;
 ;
 
 #------------------------------------------------------------
@@ -589,8 +595,8 @@ programmer
     vcc                    = 3;
     reset                  = 16;
     sck                    = 1;
-    mosi                   = 2;
-    miso                   = 11;
+    sdo                    = 2;
+    sdi                    = 11;
 ;
 
 #------------------------------------------------------------
@@ -604,8 +610,8 @@ programmer
     prog_modes             = PM_TPI | PM_ISP;
     reset                  = ~6;
     sck                    = ~8;
-    mosi                   = ~7;
-    miso                   = ~10;
+    sdo                    = ~7;
+    sdi                    = ~10;
 ;
 
 #------------------------------------------------------------
@@ -619,8 +625,8 @@ programmer
     prog_modes             = PM_TPI | PM_ISP;
     reset                  = ~4;
     sck                    = 3;
-    mosi                   = 2;
-    miso                   = 10;
+    sdo                    = 2;
+    sdi                    = 10;
 ;
 
 #------------------------------------------------------------
@@ -635,8 +641,8 @@ programmer
     buff                   = 14;
     reset                  = 3;
     sck                    = 2;
-    mosi                   = 8;
-    miso                   = 11;
+    sdo                    = 8;
+    sdi                    = 11;
 ;
 
 #------------------------------------------------------------
@@ -667,8 +673,8 @@ programmer
     prog_modes             = PM_TPI | PM_ISP;
     reset                  = 17;
     sck                    = 1;
-    mosi                   = 2;
-    miso                   = 10;
+    sdo                    = 2;
+    sdi                    = 10;
 ;
 @HAVE_PARPORT_END@
 
@@ -699,8 +705,8 @@ programmer
 #     prog_modes           = PM_ISP;
 #     reset                = ?;
 #     sck                  = ?;
-#     mosi                 = ?;
-#     miso                 = ?;
+#     sdo                  = ?;
+#     sdi                  = ?;
 # ;
 @HAVE_LINUXGPIO_END@
 
@@ -757,6 +763,19 @@ programmer
 ;
 
 #------------------------------------------------------------
+# urclock
+#------------------------------------------------------------
+
+# See https://github.com/stefanrueger/urboot
+programmer
+    id                     = "urclock";
+    desc                   = "Urclock programmer for urboot bootloaders using urprotocol";
+    type                   = "urclock";
+    prog_modes             = PM_SPM;
+    connection_type        = serial;
+;
+
+#------------------------------------------------------------
 # xbee
 #------------------------------------------------------------
 
@@ -788,7 +807,7 @@ programmer
 # And fill that in here.
 #
 # Note that the pin numbers for the main ISP signals (reset, sck,
-# mosi, miso) are fixed and cannot be changed, since they must match
+# sdo, sdi) are fixed and cannot be changed, since they must match
 # the way the Multi-Protocol Synchronous Serial Engine (MPSSE) of
 # these FTDI ICs has been designed.
 
@@ -804,8 +823,8 @@ programmer
 #   ISP-signals - lower ADBUS-Nibble (default)
     reset                  = 3;
     sck                    = 0;
-    mosi                   = 1;
-    miso                   = 2;
+    sdo                    = 1;
+    sdi                    = 2;
 #   LED SIGNALs - higher ADBUS-Nibble
 #   errled                 = 4;
 #   rdyled                 = 5;
@@ -838,8 +857,8 @@ programmer
 #ISP-signals
     reset                  = 3;
     sck                    = 0;
-    mosi                   = 1;
-    miso                   = 2;
+    sdo                    = 1;
+    sdi                    = 2;
 #LED SIGNALs
     errled                 = ~11;
     rdyled                 = ~14;
@@ -878,8 +897,8 @@ programmer
 #   ISP-signals => 20 - Pin connector on JTAGKey
     reset                  = 3; # TMS 7 violet
     sck                    = 0; # TCK 9 white
-    mosi                   = 1; # TDI 5 green
-    miso                   = 2; # TDO 13 orange
+    sdo                    = 1; # TDI 5 green
+    sdi                    = 2; # TDO 13 orange
 #   VTG           VREF 1 brown with red tip
 #   GND           GND 20 black
 # The colors are on the 20 pin breakout cable from Amontec
@@ -901,8 +920,8 @@ programmer
 #ISP-signals
     reset                  = 3; # AD3 (TMS)
     sck                    = 0; # AD0 (TCK)
-    mosi                   = 1; # AD1 (TDI)
-    miso                   = 2; # AD2 (TDO)
+    sdo                    = 1; # AD1 (TDI)
+    sdi                    = 2; # AD2 (TDO)
 ;
 
 #------------------------------------------------------------
@@ -910,8 +929,8 @@ programmer
 #------------------------------------------------------------
 
 # Pin J2-7 (AD0) is SCK
-# Pin J2-8 (AD1) is MOSI
-# Pin J2-9 (AD2) is MISO
+# Pin J2-8 (AD1) is SDO
+# Pin J2-9 (AD2) is SDI
 # Pin J2-10 (AD3) is RESET
 # Pin J2-6 is GND
 # Use the -b flag to set the SPI clock rate eg -b 3750000 is the fastest I could get
@@ -928,8 +947,8 @@ programmer parent "ft232h"
 #------------------------------------------------------------
 
 # Orange (Pin 2) is SCK
-# Yellow (Pin 3) is MOSI
-# Green (Pin 4) is MISO
+# Yellow (Pin 3) is SDO
+# Green (Pin 4) is SDI
 # Brown (Pin 5) is RESET
 # Black (Pin 10) is GND
 # Use the -b flag to set the SPI clock rate eg -b 3750000 is the fastest I could get
@@ -984,8 +1003,8 @@ programmer
     usbdev                 = "A";
     reset                  = 3; # TMS 7
     sck                    = 0; # TCK 9
-    mosi                   = 1; # TDI 5
-    miso                   = 2; # TDO 13
+    sdo                    = 1; # TDI 5
+    sdi                    = 2; # TDO 13
 ;
 
 #------------------------------------------------------------
@@ -1011,8 +1030,8 @@ programmer
 #ISP-signals - lower ACBUS-Nibble (default)
     reset                  = 3;
     sck                    = 0;
-    mosi                   = 1;
-    miso                   = 2;
+    sdo                    = 1;
+    sdi                    = 2;
 ;
 
 #------------------------------------------------------------
@@ -1033,8 +1052,8 @@ programmer
     usbvendor              = "TIAO";
     reset                  = 3; # TMS 7
     sck                    = 0; # TCK 9
-    mosi                   = 1; # TDI 5
-    miso                   = 2; # TDO 13
+    sdo                    = 1; # TDI 5
+    sdi                    = 2; # TDO 13
 ;
 
 #------------------------------------------------------------
@@ -1050,7 +1069,7 @@ programmer
 # KT-LINK JTAG CONN:
 #  1=Vsense(->EXT13), 19=5V(EXT1->EXT3), 20=GND, 3=TPIRST, 9=TPICLK, 7=TPIDATA.
 # INTERNALS CONFIGURATION ("~" MEANS ACTIVE LOW):
-#  ~TRST_EN=10(ACBUS2), ~CLK_EN=14(ACBUS6), ~MOSI_EN=13(ACBUS5),
+#  ~TRST_EN=10(ACBUS2), ~CLK_EN=14(ACBUS6), ~SDO_EN=13(ACBUS5),
 #  TMS_SEL=5(ADBUS5), ~TMS_EN=12(ACBUS4), LED=~15(ACBUS7).
 # CONNECTION NOTES:
 #  * Connect EXT connector pin 1 with 3 to get 5V on JTAG connector pin 19.
@@ -1070,8 +1089,8 @@ programmer
     buff                   = 5, ~10, ~13, ~14;
     reset                  = 8;
     sck                    = 0;
-    mosi                   = 1;
-    miso                   = 2;
+    sdo                    = 1;
+    sdi                    = 2;
     rdyled                 = ~15;
 ;
 
@@ -1093,8 +1112,8 @@ programmer
     buff                   = 5, 6, 7;
     reset                  = 3;
     sck                    = 0;
-    mosi                   = 1;
-    miso                   = 2;
+    sdo                    = 1;
+    sdi                    = 2;
 ;
 
 #------------------------------------------------------------
@@ -1177,11 +1196,11 @@ programmer
     prog_modes             = PM_TPI | PM_ISP;
     connection_type        = serial;
   # pins are bits in bitbang byte (numbers are 87654321)
-  # 1|POWER|PULLUP|AUX|MOSI|CLK|MISO|CS
+  # 1|POWER|PULLUP|AUX|SDO|CLK|SDI|CS
     reset                  = 1;
     sck                    = 3;
-    mosi                   = 4;
-    miso                   = 2;
+    sdo                    = 4;
+    sdi                    = 2;
   # vcc                    = 7; # Internally set independent of this setting
 ;
 
@@ -1322,8 +1341,8 @@ programmer
     connection_type        = usb;
     reset                  = 4; # D4
     sck                    = 0; # D0
-    mosi                   = 2; # D2
-    miso                   = 1; # D1
+    sdo                    = 2; # D2
+    sdi                    = 1; # D1
 ;
 
 #------------------------------------------------------------
@@ -1338,8 +1357,8 @@ programmer
     connection_type        = usb;
     reset                  = 4;  # DTR
     sck                    = 0;  # TxD
-    mosi                   = 2;  # RTS
-    miso                   = 1;  # RxD
+    sdo                    = 2;  # RTS
+    sdi                    = 1;  # RxD
 ;
 
 #------------------------------------------------------------
@@ -1356,8 +1375,8 @@ programmer
     connection_type        = usb;
     reset                  = 7;  # RI
     sck                    = 6;  # DCD
-    mosi                   = 3;  # CTS
-    miso                   = 5;  # DSR
+    sdo                    = 3;  # CTS
+    sdi                    = 5;  # DSR
 ;
 
 #------------------------------------------------------------
@@ -1375,8 +1394,8 @@ programmer
     connection_type        = usb;
     reset                  = 7;  # RI  X3(4)
     sck                    = 5;  # DSR X3(2)
-    mosi                   = 6;  # DCD X3(3)
-    miso                   = 3;  # CTS X3(1)
+    sdo                    = 6;  # DCD X3(3)
+    sdi                    = 3;  # CTS X3(1)
 ;
 
 #------------------------------------------------------------
@@ -1392,8 +1411,8 @@ programmer
   #                      FOR TPI devices:
     reset                  = 3;  # CTS = D3 (wire to ~RESET)
     sck                    = 2;  # RTS = D2 (wire to SCK)
-    mosi                   = 0;  # TxD = D0 (wire to TPIDATA via 1k resistor)
-    miso                   = 1;  # RxD = D1 (wire to TPIDATA directly)
+    sdo                    = 0;  # TxD = D0 (wire to TPIDATA via 1k resistor)
+    sdi                    = 1;  # RxD = D1 (wire to TPIDATA directly)
 ;
 
 #------------------------------------------------------------
@@ -1426,8 +1445,8 @@ programmer
     connection_type        = usb;
     reset                  = 7; # ri
     sck                    = 5; # dsr
-    mosi                   = 6; # dcd
-    miso                   = 3; # cts
+    sdo                    = 6; # dcd
+    sdi                    = 3; # cts
 ;
 
 #------------------------------------------------------------
@@ -1440,11 +1459,11 @@ programmer
 # For ICSP pinout see for example http://www.atmel.com/images/doc2562.pdf
 # (Figure 1. ISP6PIN header pinout and Table 1. Connections required for ISP ...)
 # TTL-232R GND 1 Black  -> ICPS GND   (pin 6)
-# TTL-232R CTS 2 Brown  -> ICPS MOSI  (pin 4)
+# TTL-232R CTS 2 Brown  -> ICPS SDO   (pin 4)
 # TTL-232R VCC 3 Red    -> ICPS VCC   (pin 2)
 # TTL-232R TXD 4 Orange -> ICPS RESET (pin 5)
 # TTL-232R RXD 5 Yellow -> ICPS SCK   (pin 3)
-# TTL-232R RTS 6 Green  -> ICPS MISO  (pin 1)
+# TTL-232R RTS 6 Green  -> ICPS SDI   (pin 1)
 # Except for VCC and GND, you can connect arbitual pairs as long as
 # the following table is adjusted.
 
@@ -1456,8 +1475,8 @@ programmer
     connection_type        = usb;
     reset                  = 0; # txd
     sck                    = 1; # rxd
-    mosi                   = 3; # cts
-    miso                   = 2; # rts
+    sdo                    = 3; # cts
+    sdi                    = 2; # rts
 ;
 
 #------------------------------------------------------------
@@ -1524,8 +1543,8 @@ programmer
 #------------------------------------------------------------
 
 # USBtiny can also be used for TPI programming.
-# In that case, a resistor of 1 kOhm is needed between MISO and MOSI
-# pins of the connector, and MISO (pin 1 of the 6-pin connector)
+# In that case, a resistor of 1 kOhm is needed between SDI and SDO
+# pins of the connector, and SDI (pin 1 of the 6-pin connector)
 # connects to TPIDATA.
 
 programmer
@@ -2045,6 +2064,20 @@ programmer
 ;
 
 #------------------------------------------------------------
+# xplainedpro_pdi
+#------------------------------------------------------------
+
+programmer
+    id                     = "xplainedpro_pdi";
+    desc                   = "Atmel AVR XplainedPro in PDI mode";
+    type                   = "jtagice3_pdi";
+    prog_modes             = PM_PDI;
+    connection_type        = usb;
+    usbpid                 = 0x2111;
+    hvupdi_support         = 1;
+;
+
+#------------------------------------------------------------
 # xplainedpro_updi
 #------------------------------------------------------------
 
@@ -2394,18 +2427,18 @@ programmer
 # Using RI is not supported under Win32 but is supported under Posix.
 
 # serial ponyprog design (dasa2 in uisp)
-# reset=!txd sck=rts mosi=dtr miso=cts
+# reset=!txd sck=rts sdo=dtr sdi=cts
 
 programmer
     id                     = "ponyser";
-    desc                   = "design ponyprog serial, reset=!txd sck=rts mosi=dtr miso=cts";
+    desc                   = "design ponyprog serial, reset=!txd sck=rts sdo=dtr sdi=cts";
     type                   = "serbb";
     prog_modes             = PM_TPI | PM_ISP;
     connection_type        = serial;
     reset                  = ~3;
     sck                    = 7;
-    mosi                   = 4;
-    miso                   = 8;
+    sdo                    = 4;
+    sdi                    = 8;
 ;
 
 #------------------------------------------------------------
@@ -2413,7 +2446,7 @@ programmer
 #------------------------------------------------------------
 
 # Same as above, different name
-# reset=!txd sck=rts mosi=dtr miso=cts
+# reset=!txd sck=rts sdo=dtr sdi=cts
 
 programmer parent "ponyser"
     id                     = "siprog";
@@ -2425,18 +2458,18 @@ programmer parent "ponyser"
 #------------------------------------------------------------
 
 # unknown (dasa in uisp)
-# reset=rts sck=dtr mosi=txd miso=cts
+# reset=rts sck=dtr sdo=txd sdi=cts
 
 programmer
     id                     = "dasa";
-    desc                   = "serial port banging, reset=rts sck=dtr mosi=txd miso=cts";
+    desc                   = "serial port banging, reset=rts sck=dtr sdo=txd sdi=cts";
     type                   = "serbb";
     prog_modes             = PM_TPI | PM_ISP;
     connection_type        = serial;
     reset                  = 7;
     sck                    = 4;
-    mosi                   = 3;
-    miso                   = 8;
+    sdo                    = 3;
+    sdi                    = 8;
 ;
 
 #------------------------------------------------------------
@@ -2444,18 +2477,18 @@ programmer
 #------------------------------------------------------------
 
 # unknown (dasa3 in uisp)
-# reset=!dtr sck=rts mosi=txd miso=cts
+# reset=!dtr sck=rts sdo=txd sdi=cts
 
 programmer
     id                     = "dasa3";
-    desc                   = "serial port banging, reset=!dtr sck=rts mosi=txd miso=cts";
+    desc                   = "serial port banging, reset=!dtr sck=rts sdo=txd sdi=cts";
     type                   = "serbb";
     prog_modes             = PM_TPI | PM_ISP;
     connection_type        = serial;
     reset                  = ~4;
     sck                    = 7;
-    mosi                   = 3;
-    miso                   = 8;
+    sdo                    = 3;
+    sdi                    = 8;
 ;
 
 #------------------------------------------------------------
@@ -2463,18 +2496,18 @@ programmer
 #------------------------------------------------------------
 
 # C2N232i (jumper configuration "auto")
-# reset=dtr sck=!rts mosi=!txd miso=!cts
+# reset=dtr sck=!rts sdo=!txd sdi=!cts
 
 programmer
     id                     = "c2n232i";
-    desc                   = "serial port banging, reset=dtr sck=!rts mosi=!txd miso=!cts";
+    desc                   = "serial port banging, reset=dtr sck=!rts sdo=!txd sdi=!cts";
     type                   = "serbb";
     prog_modes             = PM_TPI | PM_ISP;
     connection_type        = serial;
     reset                  = 4;
     sck                    = ~7;
-    mosi                   = ~3;
-    miso                   = ~8;
+    sdo                    = ~3;
+    sdi                    = ~8;
 ;
 
 #------------------------------------------------------------
@@ -2702,6 +2735,8 @@ part
     programfusepolltimeout = 25;
     programlockpolltimeout = 25;
     synchcycles            = 6;
+    spmcr                  = 0x57;
+    eecr                   = 0x3c;
     ocdrev                 = 0;
     chip_erase             = "1010.1100--100x.xxxx--xxxx.xxxx--xxxx.xxxx";
     pgm_enable             = "1010.1100--0101.0011--xxxx.xxxx--xxxx.xxxx";
@@ -3713,6 +3748,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_JTAG | PM_JTAGmkI;
     mcuid                  = 72;
     n_interrupts           = 35;
+    n_boot_sections        = 4;
+    boot_section_size      = 1024;
     stk500_devcode         = 0xa0;
     avr910_devcode         = 0x45;
     chip_erase_delay       = 9000;
@@ -3842,6 +3879,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_JTAG | PM_JTAGmkI;
     mcuid                  = 85;
     n_interrupts           = 35;
+    n_boot_sections        = 4;
+    boot_section_size      = 1024;
     stk500_devcode         = 0xb2;
     avr910_devcode         = 0x43;
     chip_erase_delay       = 9000;
@@ -3972,6 +4011,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_JTAG | PM_JTAGmkI;
     mcuid                  = 176;
     n_interrupts           = 37;
+    n_boot_sections        = 4;
+    boot_section_size      = 1024;
     stk500_devcode         = 0xb3;
     chip_erase_delay       = 9000;
     pagel                  = 0xd7;
@@ -4095,6 +4136,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_JTAG;
     mcuid                  = 172;
     n_interrupts           = 37;
+    n_boot_sections        = 4;
+    boot_section_size      = 1024;
     stk500_devcode         = 0xb3;
     chip_erase_delay       = 9000;
     pagel                  = 0xd7;
@@ -4218,6 +4261,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_JTAG;
     mcuid                  = 171;
     n_interrupts           = 37;
+    n_boot_sections        = 4;
+    boot_section_size      = 1024;
     stk500_devcode         = 0xb3;
     chip_erase_delay       = 9000;
     pagel                  = 0xd7;
@@ -4341,6 +4386,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_JTAG | PM_JTAGmkI;
     mcuid                  = 49;
     n_interrupts           = 21;
+    n_boot_sections        = 4;
+    boot_section_size      = 256;
     stk500_devcode         = 0x82;
     avr910_devcode         = 0x74;
     chip_erase_delay       = 9000;
@@ -4466,6 +4513,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_JTAG;
     mcuid                  = 111;
     n_interrupts           = 31;
+    n_boot_sections        = 4;
+    boot_section_size      = 512;
     stk500_devcode         = 0x82; # no STK500v1 support, use the ATmega16 one
     avr910_devcode         = 0x74;
     chip_erase_delay       = 55000;
@@ -4587,6 +4636,7 @@ part parent "m324p"
     desc                   = "ATmega164P";
     id                     = "m164p";
     mcuid                  = 93;
+    boot_section_size      = 256;
     signature              = 0x1e 0x94 0x0a;
 
     memory "eeprom"
@@ -4628,6 +4678,7 @@ part parent "m324p"
     desc                   = "ATmega324PB";
     id                     = "m324pb";
     mcuid                  = 113;
+    n_interrupts           = 51;
     signature              = 0x1e 0x95 0x17;
 ;
 
@@ -4663,6 +4714,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_JTAG;
     mcuid                  = 127;
     n_interrupts           = 28;
+    n_boot_sections        = 4;
+    boot_section_size      = 1024;
     stk500_devcode         = 0x82; # no STK500v1 support, use the ATmega16 one
     avr910_devcode         = 0x74;
     chip_erase_delay       = 55000;
@@ -4818,6 +4871,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_JTAG;
     mcuid                  = 140;
     n_interrupts           = 35;
+    n_boot_sections        = 4;
+    boot_section_size      = 1024;
     stk500_devcode         = 0x82; # no STK500v1 support, use the ATmega16 one
     avr910_devcode         = 0x74;
     chip_erase_delay       = 55000;
@@ -4953,6 +5008,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_JTAG | PM_JTAGmkI;
     mcuid                  = 90;
     n_interrupts           = 28;
+    n_boot_sections        = 4;
+    boot_section_size      = 256;
     stk500_devcode         = 0x83;
     avr910_devcode         = 0x63;
     chip_erase_delay       = 9000;
@@ -5074,6 +5131,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP;
     mcuid                  = 91;
     n_interrupts           = 18;
+    n_boot_sections        = 4;
+    boot_section_size      = 256;
     stk500_devcode         = 0x81;
     avr910_devcode         = 0x64;
     chip_erase_delay       = 32000;
@@ -5178,6 +5237,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_JTAG | PM_JTAGmkI;
     mcuid                  = 104;
     n_interrupts           = 23;
+    n_boot_sections        = 4;
+    boot_section_size      = 256;
     stk500_devcode         = 0x85;
     avr910_devcode         = 0x78;
     chip_erase_delay       = 9000;
@@ -5335,6 +5396,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_JTAG;
     mcuid                  = 121;
     n_interrupts           = 23;
+    n_boot_sections        = 4;
+    boot_section_size      = 512;
 #   stk500_devcode         = 0x85; # no STK500 support, only STK500v2
 #   avr910_devcode         = 0x?;  # try the ATmega169 one:
     avr910_devcode         = 0x75;
@@ -5538,6 +5601,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_JTAG;
     mcuid                  = 135;
     n_interrupts           = 23;
+    n_boot_sections        = 4;
+    boot_section_size      = 1024;
 #   stk500_devcode         = 0x85; # no STK500 support, only STK500v2
 #   avr910_devcode         = 0x?;  # try the ATmega169 one:
     avr910_devcode         = 0x75;
@@ -5718,6 +5783,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_JTAG | PM_JTAGmkI;
     mcuid                  = 58;
     n_interrupts           = 21;
+    n_boot_sections        = 4;
+    boot_section_size      = 512;
     stk500_devcode         = 0x91;
     avr910_devcode         = 0x72;
     chip_erase_delay       = 9000;
@@ -5831,6 +5898,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP;
     mcuid                  = 89;
     n_interrupts           = 21;
+    n_boot_sections        = 1;
+    boot_section_size      = 1024;
     stk500_devcode         = 0x80;
     avr910_devcode         = 0x60;
     chip_erase_delay       = 28000;
@@ -5932,6 +6001,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP;
     mcuid                  = 45;
     n_interrupts           = 19;
+    n_boot_sections        = 4;
+    boot_section_size      = 256;
     stk500_devcode         = 0x70;
     avr910_devcode         = 0x76;
     chip_erase_delay       = 10000;
@@ -6053,6 +6124,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP;
     mcuid                  = 160;
     n_interrupts           = 17;
+    n_boot_sections        = 4;
+    boot_section_size      = 256;
     stk500_devcode         = 0x63;
     avr910_devcode         = 0x3a;
     chip_erase_delay       = 9000;
@@ -6156,6 +6229,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP;
     mcuid                  = 161;
     n_interrupts           = 21;
+    n_boot_sections        = 4;
+    boot_section_size      = 256;
     stk500_devcode         = 0x64;
     avr910_devcode         = 0x69;
     chip_erase_delay       = 9000;
@@ -6402,6 +6477,8 @@ part
     chiperasepolltimeout   = 10;
     programfusepolltimeout = 5;
     programlockpolltimeout = 5;
+    spmcr                  = 0x57;
+    eecr                   = 0x3c;
     ocdrev                 = 1;
     chip_erase             = "1010.1100--100x.xxxx--xxxx.xxxx--xxxx.xxxx";
     pgm_enable             = "1010.1100--0101.0011--xxxx.xxxx--xxxx.xxxx";
@@ -6538,6 +6615,8 @@ part
     chiperasepolltimeout   = 10;
     programfusepolltimeout = 5;
     programlockpolltimeout = 5;
+    spmcr                  = 0x57;
+    eecr                   = 0x3c;
     ocdrev                 = 1;
     chip_erase             = "1010.1100--100x.xxxx--xxxx.xxxx--xxxx.xxxx";
     pgm_enable             = "1010.1100--0101.0011--xxxx.xxxx--xxxx.xxxx";
@@ -6674,6 +6753,8 @@ part
     chiperasepolltimeout   = 10;
     programfusepolltimeout = 5;
     programlockpolltimeout = 5;
+    spmcr                  = 0x57;
+    eecr                   = 0x3c;
     ocdrev                 = 1;
     chip_erase             = "1010.1100--100x.xxxx--xxxx.xxxx--xxxx.xxxx";
     pgm_enable             = "1010.1100--0101.0011--xxxx.xxxx--xxxx.xxxx";
@@ -6865,6 +6946,8 @@ part
     chiperasepolltimeout   = 10;
     programfusepolltimeout = 5;
     programlockpolltimeout = 5;
+    spmcr                  = 0x57;
+    eecr                   = 0x3f;
     ocdrev                 = 1;
     chip_erase             = "1010.1100--100x.xxxx--xxxx.xxxx--xxxx.xxxx";
     pgm_enable             = "1010.1100--0101.0011--xxxx.xxxx--xxxx.xxxx";
@@ -7001,6 +7084,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_debugWIRE;
     mcuid                  = 79;
     n_interrupts           = 26;
+    n_boot_sections        = 4;
+    boot_section_size      = 256;
     stk500_devcode         = 0x73;
     chip_erase_delay       = 9000;
     pagel                  = 0xd7;
@@ -7037,6 +7122,8 @@ part
     chiperasepolltimeout   = 10;
     programfusepolltimeout = 5;
     programlockpolltimeout = 5;
+    spmcr                  = 0x57;
+    eecr                   = 0x3f;
     ocdrev                 = 1;
     chip_erase             = "1010.1100--100x.xxxx--xxxx.xxxx--xxxx.xxxx";
     pgm_enable             = "1010.1100--0101.0011--xxxx.xxxx--xxxx.xxxx";
@@ -7174,6 +7261,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_debugWIRE;
     mcuid                  = 99;
     n_interrupts           = 26;
+    n_boot_sections        = 4;
+    boot_section_size      = 256;
     stk500_devcode         = 0x86;
     chip_erase_delay       = 9000;
     pagel                  = 0xd7;
@@ -7210,6 +7299,8 @@ part
     chiperasepolltimeout   = 10;
     programfusepolltimeout = 5;
     programlockpolltimeout = 5;
+    spmcr                  = 0x57;
+    eecr                   = 0x3f;
     ocdrev                 = 1;
     chip_erase             = "1010.1100--100x.xxxx--xxxx.xxxx--xxxx.xxxx";
     pgm_enable             = "1010.1100--0101.0011--xxxx.xxxx--xxxx.xxxx";
@@ -7347,6 +7438,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_debugWIRE;
     mcuid                  = 35;
     n_interrupts           = 26;
+    n_boot_sections        = 4;
+    boot_section_size      = 256;
     stk500_devcode         = 0x86;
     chip_erase_delay       = 15000;
     pagel                  = 0xd7;
@@ -7383,6 +7476,8 @@ part
     chiperasepolltimeout   = 10;
     programfusepolltimeout = 5;
     programlockpolltimeout = 5;
+    spmcr                  = 0x57;
+    eecr                   = 0x3f;
     chip_erase             = "1010.1100--100x.xxxx--xxxx.xxxx--xxxx.xxxx";
     pgm_enable             = "1010.1100--0101.0011--xxxx.xxxx--xxxx.xxxx";
 
@@ -7519,6 +7614,7 @@ part
     programfusepolltimeout = 5;
     programlockpolltimeout = 5;
     spmcr                  = 0x57;
+    eecr                   = 0x3f;
     chip_erase             = "1010.1100--100x.xxxx--xxxx.xxxx--xxxx.xxxx";
     pgm_enable             = "1010.1100--0101.0011--xxxx.xxxx--xxxx.xxxx";
 
@@ -7646,6 +7742,7 @@ part
     programfusepolltimeout = 5;
     programlockpolltimeout = 5;
     spmcr                  = 0x57;
+    eecr                   = 0x3f;
     chip_erase             = "1010.1100--100x.xxxx--xxxx.xxxx--xxxx.xxxx";
     pgm_enable             = "1010.1100--0101.0011--xxxx.xxxx--xxxx.xxxx";
 
@@ -7773,6 +7870,8 @@ part
     chiperasepolltimeout   = 10;
     programfusepolltimeout = 5;
     programlockpolltimeout = 5;
+    spmcr                  = 0x57;
+    eecr                   = 0x3f;
     ocdrev                 = 1;
     chip_erase             = "1010.1100--100x.xxxx--xxxx.xxxx--xxxx.xxxx";
     pgm_enable             = "1010.1100--0101.0011--xxxx.xxxx--xxxx.xxxx";
@@ -7901,6 +8000,8 @@ part
     chiperasepolltimeout   = 10;
     programfusepolltimeout = 5;
     programlockpolltimeout = 5;
+    spmcr                  = 0x57;
+    eecr                   = 0x3f;
     ocdrev                 = 1;
     chip_erase             = "1010.1100--100x.xxxx--xxxx.xxxx--xxxx.xxxx";
     pgm_enable             = "1010.1100--0101.0011--xxxx.xxxx--xxxx.xxxx";
@@ -7993,6 +8094,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_debugWIRE;
     mcuid                  = 118;
     n_interrupts           = 26;
+    n_boot_sections        = 4;
+    boot_section_size      = 512;
     stk500_devcode         = 0x86;
     chip_erase_delay       = 9000;
     pagel                  = 0xd7;
@@ -8029,6 +8132,8 @@ part
     chiperasepolltimeout   = 10;
     programfusepolltimeout = 5;
     programlockpolltimeout = 5;
+    spmcr                  = 0x57;
+    eecr                   = 0x3f;
     ocdrev                 = 1;
     chip_erase             = "1010.1100--100x.xxxx--xxxx.xxxx--xxxx.xxxx";
     pgm_enable             = "1010.1100--0101.0011--xxxx.xxxx--xxxx.xxxx";
@@ -8167,6 +8272,7 @@ part parent "m328"
     id                     = "m64m1";
     mcuid                  = 76;
     n_interrupts           = 31;
+    boot_section_size      = 1024;
     bs2                    = 0xe2;
 #   stk500_devcode         = 0x??;
 #   avr910_devcode         = 0x??;
@@ -8242,6 +8348,8 @@ part
     chiperasepolltimeout   = 10;
     programfusepolltimeout = 5;
     programlockpolltimeout = 5;
+    spmcr                  = 0x57;
+    eecr                   = 0x3c;
     ocdrev                 = 0;
     chip_erase             = "1010.1100--100x.xxxx--xxxx.xxxx--xxxx.xxxx";
     pgm_enable             = "1010.1100--0101.0011--xxxx.xxxx--xxxx.xxxx";
@@ -8386,6 +8494,8 @@ part
     chiperasepolltimeout   = 10;
     programfusepolltimeout = 5;
     programlockpolltimeout = 5;
+    spmcr                  = 0x57;
+    eecr                   = 0x3c;
     ocdrev                 = 0;
     chip_erase             = "1010.1100--100x.xxxx--xxxx.xxxx--xxxx.xxxx";
     pgm_enable             = "1010.1100--0101.0011--xxxx.xxxx--xxxx.xxxx";
@@ -8478,6 +8588,7 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_debugWIRE;
     mcuid                  = 167;
     n_interrupts           = 32;
+    n_boot_sections        = 4;
     stk500_devcode         = 0x65;
     chip_erase_delay       = 9000;
     pagel                  = 0xd8;
@@ -8513,6 +8624,8 @@ part
     chiperasepolltimeout   = 10;
     programfusepolltimeout = 5;
     programlockpolltimeout = 5;
+    spmcr                  = 0x57;
+    eecr                   = 0x3f;
     chip_erase             = "1010.1100--100x.xxxx--xxxx.xxxx--xxxx.xxxx";
     pgm_enable             = "1010.1100--0101.0011--xxxx.xxxx--xxxx.xxxx";
 
@@ -8604,6 +8717,7 @@ part parent "pwm2"
     desc                   = "AT90PWM3";
     id                     = "pwm3";
     mcuid                  = 169;
+    boot_section_size      = 256;
 ;
 
 #------------------------------------------------------------
@@ -8615,6 +8729,7 @@ part parent "pwm2"
     desc                   = "AT90PWM2B";
     id                     = "pwm2b";
     mcuid                  = 168;
+    boot_section_size      = 256;
     signature              = 0x1e 0x93 0x83;
     ocdrev                 = 1;
 ;
@@ -8641,6 +8756,7 @@ part parent "pwm3b"
     desc                   = "AT90PWM316";
     id                     = "pwm316";
     mcuid                  = 180;
+    boot_section_size      = 512;
     signature              = 0x1e 0x94 0x83;
 
     memory "flash"
@@ -8715,6 +8831,8 @@ part
     programfusepolltimeout = 25;
     programlockpolltimeout = 25;
     synchcycles            = 6;
+    spmcr                  = 0x57;
+    eecr                   = 0x3c;
     ocdrev                 = 1;
     chip_erase             = "1010.1100--100x.xxxx--xxxx.xxxx--xxxx.xxxx";
     pgm_enable             = "1010.1100--0101.0011--xxxx.xxxx--xxxx.xxxx";
@@ -8844,6 +8962,8 @@ part
     programfusepolltimeout = 25;
     programlockpolltimeout = 25;
     synchcycles            = 6;
+    spmcr                  = 0x57;
+    eecr                   = 0x3c;
     ocdrev                 = 1;
     chip_erase             = "1010.1100--100x.xxxx--xxxx.xxxx--xxxx.xxxx";
     pgm_enable             = "1010.1100--0101.0011--xxxx.xxxx--xxxx.xxxx";
@@ -8974,6 +9094,8 @@ part
     programfusepolltimeout = 25;
     programlockpolltimeout = 25;
     synchcycles            = 6;
+    spmcr                  = 0x57;
+    eecr                   = 0x3c;
     ocdrev                 = 1;
     chip_erase             = "1010.1100--100x.xxxx--xxxx.xxxx--xxxx.xxxx";
     pgm_enable             = "1010.1100--0101.0011--xxxx.xxxx--xxxx.xxxx";
@@ -9067,6 +9189,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_JTAG;
     mcuid                  = 126;
     n_interrupts           = 57;
+    n_boot_sections        = 4;
+    boot_section_size      = 1024;
 #   stk500_devcode         = 0xB2;
 #   avr910_devcode         = 0x43;
     chip_erase_delay       = 9000;
@@ -9190,6 +9314,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_JTAG;
     mcuid                  = 138;
     n_interrupts           = 57;
+    n_boot_sections        = 4;
+    boot_section_size      = 1024;
 #   stk500_devcode         = 0xB2;
 #   avr910_devcode         = 0x43;
     chip_erase_delay       = 9000;
@@ -9312,7 +9438,6 @@ part parent "m1280"
     desc                   = "ATmega1281";
     id                     = "m1281";
     mcuid                  = 139;
-    n_interrupts           = 51;
     signature              = 0x1e 0x97 0x04;
 ;
 
@@ -9326,6 +9451,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_JTAG;
     mcuid                  = 143;
     n_interrupts           = 57;
+    n_boot_sections        = 4;
+    boot_section_size      = 1024;
     stk500_devcode         = 0xb2;
 #   avr910_devcode         = 0x43;
     chip_erase_delay       = 9000;
@@ -9448,7 +9575,6 @@ part parent "m2560"
     desc                   = "ATmega2561";
     id                     = "m2561";
     mcuid                  = 144;
-    n_interrupts           = 51;
     signature              = 0x1e 0x98 0x02;
 ;
 
@@ -9622,6 +9748,8 @@ part
     programfusepolltimeout = 25;
     programlockpolltimeout = 25;
     synchcycles            = 6;
+    spmcr                  = 0x57;
+    eecr                   = 0x3c;
     ocdrev                 = 1;
     chip_erase             = "1010.1100--100x.xxxx--xxxx.xxxx--xxxx.xxxx";
     pgm_enable             = "1010.1100--0101.0011--xxxx.xxxx--xxxx.xxxx";
@@ -9762,6 +9890,8 @@ part
     programfusepolltimeout = 25;
     programlockpolltimeout = 25;
     synchcycles            = 6;
+    spmcr                  = 0x57;
+    eecr                   = 0x3c;
     ocdrev                 = 1;
     chip_erase             = "1010.1100--100x.xxxx--xxxx.xxxx--xxxx.xxxx";
     pgm_enable             = "1010.1100--0101.0011--xxxx.xxxx--xxxx.xxxx";
@@ -9902,6 +10032,8 @@ part
     programfusepolltimeout = 25;
     programlockpolltimeout = 25;
     synchcycles            = 6;
+    spmcr                  = 0x57;
+    eecr                   = 0x3c;
     ocdrev                 = 1;
     chip_erase             = "1010.1100--100x.xxxx--xxxx.xxxx--xxxx.xxxx";
     pgm_enable             = "1010.1100--0101.0011--xxxx.xxxx--xxxx.xxxx";
@@ -10092,6 +10224,8 @@ part
     chiperasepolltimeout   = 10;
     programfusepolltimeout = 5;
     programlockpolltimeout = 5;
+    spmcr                  = 0x57;
+    eecr                   = 0x3c;
     chip_erase             = "1010.1100--100x.xxxx--xxxx.xxxx--xxxx.xxxx";
     pgm_enable             = "1010.1100--0101.0011--xxxx.xxxx--xxxx.xxxx";
 
@@ -10185,6 +10319,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_JTAG;
     mcuid                  = 57;
     n_interrupts           = 43;
+    n_boot_sections        = 4;
+    boot_section_size      = 512;
 #   stk500_devcode         = 0xB2;
 #   avr910_devcode         = 0x43;
     chip_erase_delay       = 9000;
@@ -10309,6 +10445,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_JTAG;
     mcuid                  = 65;
     n_interrupts           = 43;
+    n_boot_sections        = 4;
+    boot_section_size      = 512;
 #   stk500_devcode         = 0xB2;
 #   avr910_devcode         = 0x43;
     chip_erase_delay       = 9000;
@@ -10433,6 +10571,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_JTAG;
     mcuid                  = 181;
     n_interrupts           = 38;
+    n_boot_sections        = 4;
+    boot_section_size      = 1024;
 #   stk500_devcode         = 0xB2;
 #   avr910_devcode         = 0x43;
     chip_erase_delay       = 9000;
@@ -10568,6 +10708,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_JTAG;
     mcuid                  = 184;
     n_interrupts           = 38;
+    n_boot_sections        = 4;
+    boot_section_size      = 1024;
 #   stk500_devcode         = 0xB2;
 #   avr910_devcode         = 0x43;
     chip_erase_delay       = 9000;
@@ -10703,6 +10845,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_debugWIRE;
     mcuid                  = 178;
     n_interrupts           = 29;
+    n_boot_sections        = 4;
+    boot_section_size      = 512;
     chip_erase_delay       = 9000;
     pagel                  = 0xd7;
     bs2                    = 0xc6;
@@ -10732,6 +10876,9 @@ part
     chiperasepolltimeout   = 10;
     programfusepolltimeout = 5;
     programlockpolltimeout = 5;
+    spmcr                  = 0x57;
+    eecr                   = 0x3f;
+    eind                   = 0x5c;
     ocdrev                 = 1;
     chip_erase             = "1010.1100--100x.xxxx--xxxx.xxxx--xxxx.xxxx";
     pgm_enable             = "1010.1100--0101.0011--xxxx.xxxx--xxxx.xxxx";
@@ -10822,7 +10969,9 @@ part
     id                     = "usb82";
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_debugWIRE;
     mcuid                  = 174;
-    n_interrupts           = 58;
+    n_interrupts           = 29;
+    n_boot_sections        = 4;
+    boot_section_size      = 512;
     chip_erase_delay       = 9000;
     pagel                  = 0xd7;
     bs2                    = 0xc6;
@@ -10852,6 +11001,9 @@ part
     chiperasepolltimeout   = 10;
     programfusepolltimeout = 5;
     programlockpolltimeout = 5;
+    spmcr                  = 0x57;
+    eecr                   = 0x3f;
+    eind                   = 0x5c;
     ocdrev                 = 1;
     chip_erase             = "1010.1100--100x.xxxx--xxxx.xxxx--xxxx.xxxx";
     pgm_enable             = "1010.1100--0101.0011--xxxx.xxxx--xxxx.xxxx";
@@ -10943,6 +11095,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_debugWIRE;
     mcuid                  = 64;
     n_interrupts           = 29;
+    n_boot_sections        = 4;
+    boot_section_size      = 512;
     chip_erase_delay       = 9000;
     pagel                  = 0xd7;
     bs2                    = 0xc6;
@@ -10972,6 +11126,9 @@ part
     chiperasepolltimeout   = 10;
     programfusepolltimeout = 5;
     programlockpolltimeout = 5;
+    spmcr                  = 0x57;
+    eecr                   = 0x3f;
+    eind                   = 0x5c;
     ocdrev                 = 1;
     chip_erase             = "1010.1100--100x.xxxx--xxxx.xxxx--xxxx.xxxx";
     pgm_enable             = "1010.1100--0101.0011--xxxx.xxxx--xxxx.xxxx";
@@ -11063,6 +11220,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_debugWIRE;
     mcuid                  = 56;
     n_interrupts           = 29;
+    n_boot_sections        = 4;
+    boot_section_size      = 512;
     chip_erase_delay       = 9000;
     pagel                  = 0xd7;
     bs2                    = 0xc6;
@@ -11092,6 +11251,9 @@ part
     chiperasepolltimeout   = 10;
     programfusepolltimeout = 5;
     programlockpolltimeout = 5;
+    spmcr                  = 0x57;
+    eecr                   = 0x3f;
+    eind                   = 0x5c;
     ocdrev                 = 1;
     chip_erase             = "1010.1100--100x.xxxx--xxxx.xxxx--xxxx.xxxx";
     pgm_enable             = "1010.1100--0101.0011--xxxx.xxxx--xxxx.xxxx";
@@ -11182,7 +11344,9 @@ part
     id                     = "m8u2";
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_debugWIRE;
     mcuid                  = 48;
-    n_interrupts           = 58;
+    n_interrupts           = 29;
+    n_boot_sections        = 4;
+    boot_section_size      = 512;
     chip_erase_delay       = 9000;
     pagel                  = 0xd7;
     bs2                    = 0xc6;
@@ -11212,6 +11376,9 @@ part
     chiperasepolltimeout   = 10;
     programfusepolltimeout = 5;
     programlockpolltimeout = 5;
+    spmcr                  = 0x57;
+    eecr                   = 0x3f;
+    eind                   = 0x5c;
     ocdrev                 = 1;
     chip_erase             = "1010.1100--100x.xxxx--xxxx.xxxx--xxxx.xxxx";
     pgm_enable             = "1010.1100--0101.0011--xxxx.xxxx--xxxx.xxxx";
@@ -11303,6 +11470,8 @@ part
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_JTAG;
     mcuid                  = 95;
     n_interrupts           = 22;
+    n_boot_sections        = 4;
+    boot_section_size      = 256;
 #   stk500_devcode         = 0x??;
 #   avr910_devcode         = 0x??;
     chip_erase_delay       = 9000;
@@ -11456,7 +11625,9 @@ part
     id                     = "m325";
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_JTAG;
     mcuid                  = 114;
-    n_interrupts           = 23;
+    n_interrupts           = 22;
+    n_boot_sections        = 4;
+    boot_section_size      = 512;
 #   stk500_devcode         = 0x??; # No STK500v1 support?
 #   avr910_devcode         = 0x??; # Try the ATmega16 one
     avr910_devcode         = 0x74;
@@ -11601,7 +11772,6 @@ part parent "m325"
     desc                   = "ATmega325PA";
     id                     = "m325pa";
     mcuid                  = 117;
-    n_interrupts           = 22;
     signature              = 0x1e 0x95 0x0d;
 ;
 
@@ -11614,7 +11784,9 @@ part
     id                     = "m645";
     prog_modes             = PM_SPM | PM_ISP | PM_HVPP | PM_JTAG;
     mcuid                  = 132;
-    n_interrupts           = 23;
+    n_interrupts           = 22;
+    n_boot_sections        = 4;
+    boot_section_size      = 1024;
 #   stk500_devcode         = 0x??; # No STK500v1 support?
 #   avr910_devcode         = 0x??; # Try the ATmega16 one
     avr910_devcode         = 0x74;
@@ -11843,8 +12015,10 @@ part
     desc                   = "AVR XMEGA family common values";
     id                     = ".xmega";
     prog_modes             = PM_SPM | PM_PDI;
+    n_boot_sections        = 1;
     mcu_base               = 0x0090;
     nvm_base               = 0x01c0;
+    autobaud_sync          = 0x20;
 
     memory "fuse1"
         size               = 1;
@@ -11898,6 +12072,7 @@ part parent ".xmega"
     id                     = "x16a4u";
     mcuid                  = 232;
     n_interrupts           = 127;
+    boot_section_size      = 4096;
     signature              = 0x1e 0x94 0x41;
     usbpid                 = 0x2fe3;
 
@@ -11992,6 +12167,7 @@ part parent ".xmega"
     id                     = "x32a4u";
     mcuid                  = 239;
     n_interrupts           = 127;
+    boot_section_size      = 4096;
     signature              = 0x1e 0x95 0x41;
     usbpid                 = 0x2fe4;
 
@@ -12086,6 +12262,7 @@ part parent ".xmega"
     id                     = "x64a4u";
     mcuid                  = 252;
     n_interrupts           = 127;
+    boot_section_size      = 4096;
     signature              = 0x1e 0x96 0x46;
     usbpid                 = 0x2fe5;
 
@@ -12268,6 +12445,7 @@ part parent ".xmega"
     id                     = "x128c3";
     mcuid                  = 261;
     n_interrupts           = 127;
+    boot_section_size      = 8192;
     signature              = 0x1e 0x97 0x52;
     usbpid                 = 0x2fd7;
 
@@ -12476,6 +12654,7 @@ part parent ".xmega"
     id                     = "x128a4u";
     mcuid                  = 264;
     n_interrupts           = 127;
+    boot_section_size      = 8192;
     signature              = 0x1e 0x97 0x46;
     usbpid                 = 0x2fde;
 
@@ -12532,6 +12711,7 @@ part parent ".xmega"
     prog_modes             = PM_SPM | PM_PDI | PM_XMEGAJTAG;
     mcuid                  = 257;
     n_interrupts           = 81;
+    boot_section_size      = 8192;
     signature              = 0x1e 0x97 0x4d;
     usbpid                 = 0x2fea;
 
@@ -12605,6 +12785,7 @@ part parent ".xmega"
     id                     = "x192c3";
     mcuid                  = 269;
     n_interrupts           = 127;
+    boot_section_size      = 8192;
     signature              = 0x1e 0x97 0x51;
 #   usbpid                 = 0x2f??;
 
@@ -12713,6 +12894,7 @@ part parent ".xmega"
     id                     = "x256c3";
     mcuid                  = 276;
     n_interrupts           = 127;
+    boot_section_size      = 8192;
     signature              = 0x1e 0x98 0x46;
     usbpid                 = 0x2fda;
 
@@ -12844,6 +13026,7 @@ part parent ".xmega"
     id                     = "x384c3";
     mcuid                  = 278;
     n_interrupts           = 127;
+    boot_section_size      = 8192;
     signature              = 0x1e 0x98 0x45;
     usbpid                 = 0x2fdb;
 
@@ -12911,6 +13094,7 @@ part parent ".xmega"
     id                     = "x8e5";
     mcuid                  = 230;
     n_interrupts           = 43;
+    boot_section_size      = 2048;
     signature              = 0x1e 0x93 0x41;
 
     memory "eeprom"
@@ -12965,6 +13149,7 @@ part parent ".xmega"
     id                     = "x16e5";
     mcuid                  = 235;
     n_interrupts           = 43;
+    boot_section_size      = 4096;
     signature              = 0x1e 0x94 0x45;
 
     memory "eeprom"
@@ -13019,6 +13204,7 @@ part parent ".xmega"
     id                     = "x32e5";
     mcuid                  = 242;
     n_interrupts           = 43;
+    boot_section_size      = 4096;
     signature              = 0x1e 0x95 0x4c;
 
     memory "eeprom"
@@ -13139,6 +13325,8 @@ part
     chiperasepolltimeout   = 10;
     programfusepolltimeout = 5;
     programlockpolltimeout = 5;
+    spmcr                  = 0x57;
+    eecr                   = 0x3c;
     chip_erase             = "1010.1100--100x.xxxx--xxxx.xxxx--xxxx.xxxx";
     pgm_enable             = "1010.1100--0101.0011--xxxx.xxxx--xxxx.xxxx";
 
@@ -13381,6 +13569,7 @@ part parent ".reduced_core_tiny"
     desc                   = "ATtiny102";
     id                     = "t102";
     mcuid                  = 6;
+    n_interrupts           = 16;
     signature              = 0x1e 0x90 0x0c;
 
     memory "flash"
@@ -13399,6 +13588,7 @@ part parent ".reduced_core_tiny"
     desc                   = "ATtiny104";
     id                     = "t104";
     mcuid                  = 7;
+    n_interrupts           = 16;
     signature              = 0x1e 0x90 0x0b;
 
     memory "flash"
@@ -13419,6 +13609,8 @@ part
     prog_modes             = PM_SPM | PM_HVPP | PM_JTAG;
     mcuid                  = 125;
     n_interrupts           = 23;
+    n_boot_sections        = 4;
+    boot_section_size      = 512;
     # STK500 parameters (parallel programming IO lines)
     pagel                  = 0xa7;
     bs2                    = 0xa0;
@@ -13481,6 +13673,7 @@ part
     desc                   = "AVR8X family common values";
     id                     = ".avr8x";
     prog_modes             = PM_SPM | PM_UPDI;
+    n_boot_sections        = 1;
     nvm_base               = 0x1000;
     ocd_base               = 0x0f80;
 
@@ -14308,32 +14501,26 @@ part parent ".avr8x_tiny"
         offset             = 0x8000;
         readsize           = 256;
     ;
+
+    memory "userrow"
+        size               = 64;
+        page_size          = 64;
+    ;
+
+    memory "usersig"
+        alias "userrow";
+    ;
 ;
 
 #------------------------------------------------------------
 # ATtiny3217
 #------------------------------------------------------------
 
-part parent ".avr8x_tiny"
+part parent "t3216"
     desc                   = "ATtiny3217";
     id                     = "t3217";
     mcuid                  = 315;
-    n_interrupts           = 31;
     signature              = 0x1e 0x95 0x22;
-
-    memory "eeprom"
-        size               = 256;
-        page_size          = 64;
-        offset             = 0x1400;
-        readsize           = 256;
-    ;
-
-    memory "flash"
-        size               = 0x8000;
-        page_size          = 128;
-        offset             = 0x8000;
-        readsize           = 256;
-    ;
 ;
 
 #------------------------------------------------------------
@@ -14344,6 +14531,7 @@ part parent ".avr8x_tiny"
     desc                   = "ATtiny424";
     id                     = "t424";
     mcuid                  = 292;
+    n_interrupts           = 30;
     signature              = 0x1e 0x92 0x2c;
 
     memory "eeprom"
@@ -14369,6 +14557,7 @@ part parent ".avr8x_tiny"
     desc                   = "ATtiny426";
     id                     = "t426";
     mcuid                  = 293;
+    n_interrupts           = 30;
     signature              = 0x1e 0x92 0x2b;
 
     memory "eeprom"
@@ -14394,6 +14583,7 @@ part parent ".avr8x_tiny"
     desc                   = "ATtiny427";
     id                     = "t427";
     mcuid                  = 294;
+    n_interrupts           = 30;
     signature              = 0x1e 0x92 0x2a;
 
     memory "eeprom"
@@ -14419,6 +14609,7 @@ part parent ".avr8x_tiny"
     desc                   = "ATtiny824";
     id                     = "t824";
     mcuid                  = 301;
+    n_interrupts           = 30;
     signature              = 0x1e 0x93 0x29;
 
     memory "eeprom"
@@ -14444,6 +14635,7 @@ part parent ".avr8x_tiny"
     desc                   = "ATtiny826";
     id                     = "t826";
     mcuid                  = 302;
+    n_interrupts           = 30;
     signature              = 0x1e 0x93 0x28;
 
     memory "eeprom"
@@ -14469,6 +14661,7 @@ part parent ".avr8x_tiny"
     desc                   = "ATtiny827";
     id                     = "t827";
     mcuid                  = 303;
+    n_interrupts           = 30;
     signature              = 0x1e 0x93 0x27;
 
     memory "eeprom"
@@ -14494,6 +14687,7 @@ part parent ".avr8x_tiny"
     desc                   = "ATtiny1624";
     id                     = "t1624";
     mcuid                  = 310;
+    n_interrupts           = 30;
     signature              = 0x1e 0x94 0x2a;
 
     memory "eeprom"
@@ -14519,6 +14713,7 @@ part parent ".avr8x_tiny"
     desc                   = "ATtiny1626";
     id                     = "t1626";
     mcuid                  = 311;
+    n_interrupts           = 30;
     signature              = 0x1e 0x94 0x29;
 
     memory "eeprom"
@@ -14544,6 +14739,7 @@ part parent ".avr8x_tiny"
     desc                   = "ATtiny1627";
     id                     = "t1627";
     mcuid                  = 312;
+    n_interrupts           = 30;
     signature              = 0x1e 0x94 0x28;
 
     memory "eeprom"
@@ -14569,6 +14765,7 @@ part parent ".avr8x_tiny"
     desc                   = "ATtiny3224";
     id                     = "t3224";
     mcuid                  = 316;
+    n_interrupts           = 30;
     signature              = 0x1e 0x95 0x28;
 
     memory "eeprom"
@@ -14594,6 +14791,7 @@ part parent ".avr8x_tiny"
     desc                   = "ATtiny3226";
     id                     = "t3226";
     mcuid                  = 317;
+    n_interrupts           = 30;
     signature              = 0x1e 0x95 0x27;
 
     memory "eeprom"
@@ -14619,6 +14817,7 @@ part parent ".avr8x_tiny"
     desc                   = "ATtiny3227";
     id                     = "t3227";
     mcuid                  = 318;
+    n_interrupts           = 30;
     signature              = 0x1e 0x95 0x26;
 
     memory "eeprom"
@@ -14853,6 +15052,7 @@ part
     id                     = ".avrdx";
     family_id              = "AVR    ";
     prog_modes             = PM_SPM | PM_UPDI;
+    n_boot_sections        = 1;
     # Dedicated UPDI pin, no HV
     hvupdi_variant         = 1;
     nvm_base               = 0x1000;
@@ -15010,6 +15210,7 @@ part parent ".avrdx"
     id                     = "avr32da28";
     family_id              = "    AVR";
     mcuid                  = 338;
+    n_interrupts           = 41;
     signature              = 0x1e 0x95 0x34;
 
     memory "eeprom"
@@ -15035,6 +15236,7 @@ part parent ".avrdx"
     id                     = "avr32da32";
     family_id              = "    AVR";
     mcuid                  = 342;
+    n_interrupts           = 44;
     signature              = 0x1e 0x95 0x33;
 
     memory "eeprom"
@@ -15060,6 +15262,7 @@ part parent ".avrdx"
     id                     = "avr32da48";
     family_id              = "    AVR";
     mcuid                  = 346;
+    n_interrupts           = 58;
     signature              = 0x1e 0x95 0x32;
 
     memory "eeprom"
@@ -15085,6 +15288,7 @@ part parent ".avrdx"
     id                     = "avr64da28";
     family_id              = "    AVR";
     mcuid                  = 351;
+    n_interrupts           = 41;
     signature              = 0x1e 0x96 0x15;
 
     memory "eeprom"
@@ -15110,6 +15314,7 @@ part parent ".avrdx"
     id                     = "avr64da32";
     family_id              = "    AVR";
     mcuid                  = 355;
+    n_interrupts           = 44;
     signature              = 0x1e 0x96 0x14;
 
     memory "eeprom"
@@ -15135,6 +15340,7 @@ part parent ".avrdx"
     id                     = "avr64da48";
     family_id              = "    AVR";
     mcuid                  = 359;
+    n_interrupts           = 58;
     signature              = 0x1e 0x96 0x13;
 
     memory "eeprom"
@@ -15160,6 +15366,7 @@ part parent ".avrdx"
     id                     = "avr64da64";
     family_id              = "    AVR";
     mcuid                  = 362;
+    n_interrupts           = 64;
     signature              = 0x1e 0x96 0x12;
 
     memory "eeprom"
@@ -15185,6 +15392,7 @@ part parent ".avrdx"
     id                     = "avr128da28";
     family_id              = "    AVR";
     mcuid                  = 364;
+    n_interrupts           = 41;
     signature              = 0x1e 0x97 0x0a;
 
     memory "eeprom"
@@ -15210,6 +15418,7 @@ part parent ".avrdx"
     id                     = "avr128da32";
     family_id              = "    AVR";
     mcuid                  = 366;
+    n_interrupts           = 44;
     signature              = 0x1e 0x97 0x09;
 
     memory "eeprom"
@@ -15235,6 +15444,7 @@ part parent ".avrdx"
     id                     = "avr128da48";
     family_id              = "    AVR";
     mcuid                  = 368;
+    n_interrupts           = 58;
     signature              = 0x1e 0x97 0x08;
 
     memory "eeprom"
@@ -15260,6 +15470,7 @@ part parent ".avrdx"
     id                     = "avr128da64";
     family_id              = "    AVR";
     mcuid                  = 370;
+    n_interrupts           = 64;
     signature              = 0x1e 0x97 0x07;
 
     memory "eeprom"
@@ -15284,6 +15495,7 @@ part parent ".avrdx"
     desc                   = "AVR32DB28";
     id                     = "avr32db28";
     mcuid                  = 339;
+    n_interrupts           = 42;
     signature              = 0x1e 0x95 0x37;
 
     memory "eeprom"
@@ -15308,6 +15520,7 @@ part parent ".avrdx"
     desc                   = "AVR32DB32";
     id                     = "avr32db32";
     mcuid                  = 343;
+    n_interrupts           = 44;
     signature              = 0x1e 0x95 0x36;
 
     memory "eeprom"
@@ -15332,6 +15545,7 @@ part parent ".avrdx"
     desc                   = "AVR32DB48";
     id                     = "avr32db48";
     mcuid                  = 347;
+    n_interrupts           = 61;
     signature              = 0x1e 0x95 0x35;
 
     memory "eeprom"
@@ -15356,6 +15570,7 @@ part parent ".avrdx"
     desc                   = "AVR64DB28";
     id                     = "avr64db28";
     mcuid                  = 352;
+    n_interrupts           = 42;
     signature              = 0x1e 0x96 0x19;
 
     memory "eeprom"
@@ -15380,6 +15595,7 @@ part parent ".avrdx"
     desc                   = "AVR64DB32";
     id                     = "avr64db32";
     mcuid                  = 356;
+    n_interrupts           = 44;
     signature              = 0x1e 0x96 0x18;
 
     memory "eeprom"
@@ -15404,6 +15620,7 @@ part parent ".avrdx"
     desc                   = "AVR64DB48";
     id                     = "avr64db48";
     mcuid                  = 360;
+    n_interrupts           = 61;
     signature              = 0x1e 0x96 0x17;
 
     memory "eeprom"
@@ -15428,6 +15645,7 @@ part parent ".avrdx"
     desc                   = "AVR64DB64";
     id                     = "avr64db64";
     mcuid                  = 363;
+    n_interrupts           = 65;
     signature              = 0x1e 0x96 0x16;
 
     memory "eeprom"
@@ -15452,6 +15670,7 @@ part parent ".avrdx"
     desc                   = "AVR128DB28";
     id                     = "avr128db28";
     mcuid                  = 365;
+    n_interrupts           = 42;
     signature              = 0x1e 0x97 0x0e;
 
     memory "eeprom"
@@ -15476,6 +15695,7 @@ part parent ".avrdx"
     desc                   = "AVR128DB32";
     id                     = "avr128db32";
     mcuid                  = 367;
+    n_interrupts           = 44;
     signature              = 0x1e 0x97 0x0d;
 
     memory "eeprom"
@@ -15500,6 +15720,7 @@ part parent ".avrdx"
     desc                   = "AVR128DB48";
     id                     = "avr128db48";
     mcuid                  = 369;
+    n_interrupts           = 61;
     signature              = 0x1e 0x97 0x0c;
 
     memory "eeprom"
@@ -15524,6 +15745,7 @@ part parent ".avrdx"
     desc                   = "AVR128DB64";
     id                     = "avr128db64";
     mcuid                  = 371;
+    n_interrupts           = 65;
     signature              = 0x1e 0x97 0x0b;
 
     memory "eeprom"
@@ -15548,6 +15770,7 @@ part parent ".avrdx"
     desc                   = "AVR16DD14";
     id                     = "avr16dd14";
     mcuid                  = 329;
+    n_interrupts           = 36;
     hvupdi_variant         = 2;
     signature              = 0x1e 0x94 0x34;
 
@@ -15573,6 +15796,7 @@ part parent ".avrdx"
     desc                   = "AVR16DD20";
     id                     = "avr16dd20";
     mcuid                  = 330;
+    n_interrupts           = 36;
     hvupdi_variant         = 2;
     signature              = 0x1e 0x94 0x33;
 
@@ -15598,6 +15822,7 @@ part parent ".avrdx"
     desc                   = "AVR16DD28";
     id                     = "avr16dd28";
     mcuid                  = 331;
+    n_interrupts           = 36;
     hvupdi_variant         = 2;
     signature              = 0x1e 0x94 0x32;
 
@@ -15623,6 +15848,7 @@ part parent ".avrdx"
     desc                   = "AVR16DD32";
     id                     = "avr16dd32";
     mcuid                  = 333;
+    n_interrupts           = 36;
     hvupdi_variant         = 2;
     signature              = 0x1e 0x94 0x31;
 
@@ -15648,6 +15874,7 @@ part parent ".avrdx"
     desc                   = "AVR32DD14";
     id                     = "avr32dd14";
     mcuid                  = 336;
+    n_interrupts           = 36;
     hvupdi_variant         = 2;
     signature              = 0x1e 0x95 0x3b;
 
@@ -15673,6 +15900,7 @@ part parent ".avrdx"
     desc                   = "AVR32DD20";
     id                     = "avr32dd20";
     mcuid                  = 337;
+    n_interrupts           = 36;
     hvupdi_variant         = 2;
     signature              = 0x1e 0x95 0x3a;
 
@@ -15698,6 +15926,7 @@ part parent ".avrdx"
     desc                   = "AVR32DD28";
     id                     = "avr32dd28";
     mcuid                  = 340;
+    n_interrupts           = 36;
     hvupdi_variant         = 2;
     signature              = 0x1e 0x95 0x39;
 
@@ -15723,6 +15952,7 @@ part parent ".avrdx"
     desc                   = "AVR32DD32";
     id                     = "avr32dd32";
     mcuid                  = 344;
+    n_interrupts           = 36;
     hvupdi_variant         = 2;
     signature              = 0x1e 0x95 0x38;
 
@@ -15748,6 +15978,7 @@ part parent ".avrdx"
     desc                   = "AVR64DD14";
     id                     = "avr64dd14";
     mcuid                  = 349;
+    n_interrupts           = 36;
     hvupdi_variant         = 2;
     signature              = 0x1e 0x96 0x1d;
 
@@ -15773,6 +16004,7 @@ part parent ".avrdx"
     desc                   = "AVR64DD20";
     id                     = "avr64dd20";
     mcuid                  = 350;
+    n_interrupts           = 36;
     hvupdi_variant         = 2;
     signature              = 0x1e 0x96 0x1c;
 
@@ -15798,6 +16030,7 @@ part parent ".avrdx"
     desc                   = "AVR64DD28";
     id                     = "avr64dd28";
     mcuid                  = 353;
+    n_interrupts           = 36;
     hvupdi_variant         = 2;
     signature              = 0x1e 0x96 0x1b;
 
@@ -15823,6 +16056,7 @@ part parent ".avrdx"
     desc                   = "AVR64DD32";
     id                     = "avr64dd32";
     mcuid                  = 357;
+    n_interrupts           = 36;
     hvupdi_variant         = 2;
     signature              = 0x1e 0x96 0x1a;
 
@@ -16069,6 +16303,7 @@ part parent ".avrex"
     desc                   = "AVR64EA28";
     id                     = "avr64ea28";
     mcuid                  = 354;
+    n_interrupts           = 37;
     signature              = 0x1e 0x96 0x20;
 
     memory "eeprom"
@@ -16094,6 +16329,7 @@ part parent ".avrex"
     desc                   = "AVR64EA32";
     id                     = "avr64ea32";
     mcuid                  = 358;
+    n_interrupts           = 37;
     signature              = 0x1e 0x96 0x1f;
 
     memory "eeprom"
@@ -16119,6 +16355,7 @@ part parent ".avrex"
     desc                   = "AVR64EA48";
     id                     = "avr64ea48";
     mcuid                  = 361;
+    n_interrupts           = 45;
     signature              = 0x1e 0x96 0x1e;
 
     memory "eeprom"
@@ -16145,6 +16382,7 @@ part parent "m88"
     id                     = "lgt8f88p";
     mcuid                  = 227;
     signature              = 0x1e 0x93 0x0f;
+    autobaud_sync          = 0x1c;
 ;
 
 #------------------------------------------------------------
@@ -16156,6 +16394,7 @@ part parent "m168"
     id                     = "lgt8f168p";
     mcuid                  = 228;
     signature              = 0x1e 0x94 0x0b;
+    autobaud_sync          = 0x1c;
 ;
 
 #------------------------------------------------------------
@@ -16167,4 +16406,5 @@ part parent "m328"
     id                     = "lgt8f328p";
     mcuid                  = 229;
     signature              = 0x1e 0x95 0x0f;
+    autobaud_sync          = 0x1c;
 ;

@@ -75,10 +75,12 @@ so, for the
 based programmer, the MCU signals
 .Ql /RESET ,
 .Ql SCK ,
-.Ql MISO
+.Ql SDI
 and
-.Ql MOSI
-need to be connected to the parallel port.  Optionally, some otherwise
+.Ql SDO
+of the AVR's SPI interface need to be connected to the
+parallel port; older boards might use the labels MOSI for SDO or MISO for SDI.
+Optionally, some otherwise
 unused output pins of the parallel port can be used to supply power
 for the MCU part, so it is also possible to construct a passive
 stand-alone programming device.  Some status LEDs indicating the
@@ -98,7 +100,7 @@ work at all, or to work abysmally slow.
 .Pp
 If you happen to have a Linux system with at least 4 hardware GPIOs 
 available (like almost all embedded Linux boards) you can do without 
-any additional hardware - just connect them to the MOSI, MISO, RESET 
+any additional hardware - just connect them to the SDO, SDI, RESET
 and SCK pins on the AVR and use the linuxgpio programmer type. It bitbangs
 the lines using the Linux sysfs GPIO interface. Of course, care should
 be taken about voltage level compatibility. Also, although not strictly
@@ -114,7 +116,7 @@ programmer type can be used to directly connect to and program a chip
 using the built in interfaces on the computer. The requirements to use
 this type are that an SPI interface is exposed along with one GPIO
 pin. The GPIO serves as the reset output since the Linux SPI drivers
-do not hold slave select down when a transfer is not occurring and thus
+do not hold chip select down when a transfer is not occurring and thus
 it cannot be used as the reset pin. A readily available level
 translator should be used between the SPI bus/reset GPIO and the chip
 to avoid potentially damaging the computer's SPI controller in the
@@ -147,9 +149,17 @@ programming mode.  The programmer type is ``wiring''.  Note that the -D option
 will likely be required in this case, because the bootloader will rewrite the
 program memory, but no true chip erase can be performed.
 .Pp
-The Arduino (which is very similar to the STK500 1.x) is supported via
-its own programmer type specification ``arduino''.  This programmer works for
-the Arduino Uno Rev3 or any AVR that runs the Optiboot bootloader.
+Serial bootloaders that run a skeleton of the STK500 1.x protocol are
+supported via their own programmer type ``arduino''.  This programmer works
+for the Arduino Uno Rev3 or any AVR that runs the Optiboot bootloader.
+.Pp
+Urprotocol is a leaner version of the STK500 1.x protocol that is designed
+to be backwards compatible with STK500 v1.x, and allows bootloaders to be
+much smaller, eg, as implemented in the urboot project
+https://github.com/stefanrueger/urboot. The programmer type ``urclock''
+caters for these urboot programmers. Owing to its backward compatibility,
+bootloaders that can be served by the arduino programmer can normally
+also be served by the urclock programmer.
 .Pp
 The BusPirate is a versatile tool that can also be used as an AVR programmer.
 A single BusPirate can be connected to up to 3 independent AVRs. See
@@ -209,7 +219,7 @@ has been compiled in
 .Nm avrdude ,
 the avrftdi device adds support for many programmers using FTDI's 2232C/D/H 
 and 4232H parts running in MPSSE mode, which hard-codes (in the chip) 
-SCK to bit 1, MOSI to bit 2, and MISO to bit 3. Reset is usually bit 4.
+SCK to bit 1, SDO to bit 2, and SDI to bit 3. Reset is usually bit 4.
 .Pp
 The Atmel DFU bootloader is supported in both, FLIP protocol version 1
 (AT90USB* and ATmega*U* devices), as well as version 2 (Xmega devices).
@@ -293,7 +303,7 @@ file.  Finally, a ``terminal'' mode is available that allows one to
 interactively communicate with the MCU, and to display or program
 individual memory cells.
 On the STK500 and STK600 programmer, several operational parameters (target supply
-voltage, target Aref voltage, master clock) can be examined and changed
+voltage, target Aref voltage, programming clock) can be examined and changed
 from within terminal mode as well.
 .Ss Options
 In order to control all the different operation modi, a number of options
@@ -397,8 +407,8 @@ programming requires the memory be erased to 0xFF beforehand.
 .Fl A
 should be used when the programmer hardware, or bootloader
 software for that matter, does not carry out chip erase and
-instead handles the memory erase on a page level. The popular
-Arduino bootloader exhibits this behaviour; for this reason
+instead handles the memory erase on a page level. Popular
+Arduino bootloaders exhibit this behaviour; for this reason
 .Fl A
 is engaged by default when specifying
 . Fl c
@@ -432,7 +442,7 @@ contents would exclusively cause bits to be programmed from the value
 .Ql 1
 to
 .Ql 0 .
-Note that in order to reprogram EERPOM cells, no explicit prior chip
+Note that in order to reprogram EEPROM cells, no explicit prior chip
 erase is required since the MCU provides an auto-erase cycle in that
 case before programming the cell.
 .It Xo Fl E Ar exitspec Ns
@@ -866,15 +876,19 @@ always treated as unsigned. +0x or -0x hex numbers are treated as signed
 unless they have a U suffix. Unsigned integers cannot be larger than 2^64-1.
 If n is an unsigned integer then -n is also a valid unsigned integer as in C.
 Signed integers must fall into the [-2^63, 2^63-1] range or a correspondingly
-smaller range when a suffix specifies a smaller type. Out of range signed
-numbers trigger a warning.
+smaller range when a suffix specifies a smaller type.
 .Pp
 Ordinary 0x hex integers with n hex digits (counting leading zeros) use the
-smallest size of 1, 2, 4 and 8 bytes that can accommodate any n-digit hex
-integer. If an integer suffix specifies a size explicitly the corresponding
-number of least significant bytes are written. Otherwise, signed and unsigned
-integers alike occupy the smallest of 1, 2, 4, or 8 bytes needed to
-accommodate them in their respective representation.
+smallest size of one, two, four and eight bytes that can accommodate any
+n-digit hex integer. If an integer suffix specifies a size explicitly the
+corresponding number of least significant bytes are written, and a warning
+shown if the number does not fit into the desired representation. Otherwise,
+unsigned integers occupy the smallest of one, two, four or eight bytes
+needed. Signed numbers are allowed to fit into the smallest signed or
+smallest unsigned representation: For example, 255 is stored as one byte as
+255U would fit in one byte, though as a signed number it would not fit into a
+one-byte interval [-128, 127]. The number -1 is stored in one byte whilst -1U
+needs eight bytes as it is the same as 0xFFFFffffFFFFffffU.
 .Pp
 One trailing comma at the end of
 .Ar data
@@ -947,7 +961,7 @@ can be omitted.
 .It Ar spi
 Enter direct SPI mode.  The
 .Em pgmled
-pin acts as slave select.
+pin acts as chip select.
 .Em Supported on parallel bitbang programmers, and partially by USBtiny.
 .It Ar pgm
 Return to programming mode (from direct SPI mode).
@@ -969,7 +983,7 @@ can be selected by the optional
 argument (either 0 or 1).
 .Em Supported on the STK500 and STK600 programmer.
 .It Ar fosc freq Ns Op M Ns \&| Ns k
-Set the master oscillator to
+Set the programming oscillator to
 .Ar freq
 Hz.
 An optional trailing letter
@@ -979,7 +993,7 @@ multiplies by 1E6, a trailing letter
 by 1E3.
 .Em Supported on the STK500 and STK600 programmer.
 .It Ar fosc off
-Turn the master oscillator off.
+Turn the programming oscillator off.
 .Em Supported on the STK500 and STK600 programmer.
 .It Ar sck period
 .Em STK500 and STK600 programmer:
@@ -997,7 +1011,7 @@ This parameter can also be used on the JTAG ICE mkII, JTAGICE3, and Atmel-ICE to
 ISP clock period when operating the ICE in ISP mode.
 .It Ar parms
 .Em STK500 and STK600 programmer:
-Display the current voltage and master oscillator parameters.
+Display the current voltage and programming oscillator parameters.
 .Em JTAG ICE:
 Display the current target supply voltage and JTAG bit clock rate/period.
 .Em Other programmers:
@@ -1013,8 +1027,8 @@ ll.
 2-5	Vcc (optional power supply to MCU)
 7	/RESET (to MCU)
 8	SCK (to MCU)
-9	MOSI (to MCU)
-10	MISO (from MCU)
+9	SDO (to MCU)
+10	SDI (from MCU)
 18-25	GND
 .TE
 .Ss debugWire limitations
@@ -1141,12 +1155,119 @@ programmer creates errors during initial sequence.
 Specify how many connection retry attemps to perform before exiting.
 Defaults to 10 if not specified.
 .El
+.It Ar Urclock
+.Bl -tag -offset indent -width indent
+.It Ar showall
+Show all info for the connected part, then exit. The -xshow... options
+below can be used to assemble a bespoke response consisting of a subset
+(or only one item) of all available relevant information about the
+connected part and bootloader.
+.It Ar showid
+Show a unique Urclock ID stored in either flash or EEPROM of the MCU, then exit.
+.It Ar id=<E|F>.<addr>.<len>
+Historically, the Urclock ID was a six-byte unique little-endian number
+stored in Urclock boards at EEPROM address 257. The location of this
+number can be set by the -xid=<E|F>.<addr>.<len> extended parameter. E
+stands for EEPROM and F stands for flash. A negative address addr counts
+from the end of EEPROM and flash, respectively. The length len of the
+Urclock ID can be between 1 and 8 bytes.
+.It Ar showdate
+Show the last-modified date of the input file for the flash application,
+then exit. If the input file was stdin, the date will be that of the
+programming.  Date and filename are part of the metadata that the urclock
+programmer stores by default in high flash just under the bootloader; see also
+-xnometadata.
+.It Ar showfilename
+Show the input filename (or title) of the last flash writing session, then exit.
+.It Ar title=<string>
+When set, <string> will be used in lieu of the input filename. The maximum
+string length for the title/filename field is 254 bytes including
+terminating nul.
+.It Ar showapp
+Show the size of the programmed application, then exit.
+.It Ar showstore
+Show the size of the unused flash between the application and metadata, then exit.
+.It Ar showmeta
+Show the size of the metadata just below the bootloader, then exit.
+.It Ar showboot
+Show the size of the bootloader, then exit.
+.It Ar showversion
+Show bootloader version and capabilities, then exit.
+.It Ar showvector
+Show the vector number and name of the interrupt table vector used by the
+bootloader for starting the application, then exit. For hardware-supported
+bootloaders this will be vector 0 (Reset), and for vector bootloaders this
+will be any other vector number of the interrupt vector table or the slot
+just behind the vector table with the name VBL_ADDITIONAL_VECTOR.
+.It Ar showpart
+Show the part for which the bootloader was compiled, then exit.
+.It Ar bootsize=<size>
+Manual override for bootloader size. Urboot bootloaders put the number of
+used bootloader pages into a table at the top of the bootloader section,
+ie, typically top of flash, so the urclock programmer can look up the
+bootloader size itself. In backward-compatibility mode, when programming
+via other bootloaders, this option can be used to tell the programmer the
+size, and therefore the location, of the bootloader.
+.It Ar vectornum=<arg>
+Manual override for vector number. Urboot bootloaders put the vector
+number used by a vector bootloader into a table at the top of flash, so
+this option is normally not needed for urboot bootloaders. However, it is
+useful in backward-compatibility mode (or when the urboot bootloader does
+not offer flash read). Specifying a vector number in these circumstances
+implies a vector bootloader whilst the default assumption would be a
+hardware-supported bootloader.
+.It Ar eepromrw
+Manual override for asserting EEPROM read/write capability. Not normally
+needed for urboot bootloaders, but useful for in backward-compatibility
+mode if the bootloader offers EEPROM read/write.
+.It Ar emulate_ce
+If an urboot bootloader does not offer a chip erase command it will tell
+the urclock programmer so during handshake. In this case the urclock
+programmer emulates a chip erase, if warranted by user command line
+options, by filling the remainder of unused flash below the bootloader
+with 0xff. If this option is specified, the urclock programmer will assume
+that the bootloader cannot erase the chip itself. The option is useful
+for backwards-compatible bootloaders that do not implement chip erase.
+.It Ar restore
+Upload unchanged flash input files and trim below the bootloader if
+needed. This is most useful when one has a backup of the full flash and
+wants to play that back onto the device. No metadata are written in this
+case and no vector patching happens either if it is a vector bootloader.
+However, for vector bootloaders, even under the option -xrestore an
+input file will not be uploaded for which the reset vector does not point
+to the vector bootloader. This is to avoid writing an input file to the
+device that would render the vector bootloader not functional as it would
+not be reached after reset.
+.It Ar initstore
+On writing to flash fill the store space between the flash application and
+the metadata section with 0xff.
+.It Ar nofilename
+On writing to flash do not store the application input filename (nor a title).
+.It Ar nodate
+On writing to flash do not store the application input filename (nor a
+title) and no date either.
+.It Ar nometadata
+On writing to flash do not store any metadata. The full flash below the
+bootloader is available for the application. In particular, no data store
+frame is programmed.
+.It Ar delay=<n>
+Add a <n> ms delay after reset. This can be useful if a board takes a
+particularly long time to exit from external reset. <n> can be negative,
+in which case the default 110-140 ms delay after issuing reset will be
+shortened accordingly.
+.It Ar strict
+Urclock has a faster, but slightly different strategy than -c arduino to
+synchronise with the bootloader; some stk500v1 bootloaders cannot cope
+with this, and they need the -xstrict option.
+.It Ar help
+Show this help menu and exit
+.El
 .It Ar buspirate
 .Bl -tag -offset indent -width indent
 .It Ar reset={cs,aux,aux2}
 The default setup assumes the BusPirate's CS output pin connected to 
 the RESET pin on AVR side. It is however possible to have multiple AVRs
-connected to the same BP with MISO, MOSI and SCK lines common for all of them.
+connected to the same BP with SDI, SDO and SCK lines common for all of them.
 In such a case one AVR should have its RESET connected to BusPirate's
 .Pa CS
 pin, second AVR's RESET connected to BusPirate's
@@ -1259,9 +1380,9 @@ Connection to the PICkit2 programmer:
 RST  -   VPP/MCLR (1) 
 VDD  -   VDD Target (2) -- possibly optional if AVR self powered 
 GND  -   GND (3) 
-MISO -   PGD (4) 
+SDI  -   PGD (4)
 SCLK -   PDC (5) 
-MOSI -   AUX (6) 
+SDO  -   AUX (6)
 
 .Ed
 Extended commandline parameters:
@@ -1417,7 +1538,7 @@ The USBasp and USBtinyISP drivers do not offer any option to distinguish multipl
 devices connected simultaneously, so effectively only a single device
 is supported.
 .Pp
-Slave Select must be externally held low for direct SPI when
+Chip Select must be externally held low for direct SPI when
 using USBtinyISP, and send must be a multiple of four bytes.
 .Pp
 The avrftdi driver allows one to select specific devices using any combination of vid,pid

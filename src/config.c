@@ -70,6 +70,14 @@ Component_t avr_comp[] = {
   part_comp_desc(mcuid, COMP_INT),
   part_comp_desc(n_interrupts, COMP_INT),
   part_comp_desc(n_page_erase, COMP_INT),
+  part_comp_desc(n_boot_sections, COMP_INT),
+  part_comp_desc(boot_section_size, COMP_INT),
+  part_comp_desc(autobaud_sync, COMP_CHAR),
+  part_comp_desc(idr, COMP_CHAR),
+  part_comp_desc(rampz, COMP_CHAR),
+  part_comp_desc(spmcr, COMP_CHAR),
+  part_comp_desc(eecr, COMP_CHAR),
+  part_comp_desc(eind, COMP_CHAR),
 
   // AVRMEM
   mem_comp_desc(n_word_writes, COMP_INT),
@@ -704,7 +712,7 @@ char *cfg_escape(const char *s) {
   char buf[50*1024], *d = buf;
 
   *d++ = '"';
-  for(; *s && d-buf < sizeof buf-7; s++) {
+  for(; *s && d-buf < (long) sizeof buf-7; s++) {
     switch(*s) {
     case '\n':
       *d++ = '\\'; *d++ = 'n';
@@ -855,7 +863,7 @@ void cfg_update_mcuid(AVRPART *part) {
     return;
 
   // Find an entry that shares the same name, overwrite mcuid with known, existing mcuid
-  for(int i=0; i < sizeof uP_table/sizeof *uP_table; i++) {
+  for(size_t i=0; i < sizeof uP_table/sizeof *uP_table; i++) {
     if(strcasecmp(part->desc, uP_table[i].name) == 0) {
       if(part->mcuid != (int) uP_table[i].mcuid) {
         if(part->mcuid >= 0 && verbose >= MSG_DEBUG)
@@ -867,7 +875,7 @@ void cfg_update_mcuid(AVRPART *part) {
   }
 
   // None have the same name: an entry with part->mcuid might be an error
-  for(int i=0; i < sizeof uP_table/sizeof *uP_table; i++)
+  for(size_t i=0; i < sizeof uP_table/sizeof *uP_table; i++)
     if(part->mcuid == (int) uP_table[i].mcuid) {
       // Complain unless it can be considered a variant, eg, ATmega32L and ATmega32
       AVRMEM *flash = avr_locate_mem(part, "flash");
@@ -876,7 +884,7 @@ void cfg_update_mcuid(AVRPART *part) {
         if(strncasecmp(part->desc, uP_table[i].name, l1 < l2? l1: l2) ||
             flash->size != uP_table[i].flashsize ||
             flash->page_size != uP_table[i].pagesize ||
-            part->n_interrupts != uP_table[i].ninterrupts)
+            part->n_interrupts != (int8_t) uP_table[i].ninterrupts)
           yywarning("mcuid %d is reserved for %s, use a free number >= %d",
             part->mcuid, uP_table[i].name, sizeof uP_table/sizeof *uP_table);
       }

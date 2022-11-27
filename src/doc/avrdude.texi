@@ -163,9 +163,10 @@ emulated on top of USB is likely to not work at all, or to work
 abysmally slow.
 
 If you happen to have a Linux system with at least 4 hardware GPIOs 
-available (like almost all embedded Linux boards) you can do without 
-any additional hardware - just connect them to the MOSI, MISO, RESET 
-and SCK pins on the AVR and use the linuxgpio programmer type. It bitbangs
+available (like almost all embedded Linux boards) you can do without any
+additional hardware - just connect them to the SDO, SDI, RESET and SCK
+pins of the AVR's SPI interface and use the linuxgpio programmer
+type. Older boards might use the labels MOSI for SDO and MISO for SDI. It bitbangs
 the lines using the Linux sysfs GPIO interface. Of course, care should
 be taken about voltage level compatibility. Also, although not strictly 
 required, it is strongly advisable to protect the GPIO pins from 
@@ -180,7 +181,7 @@ programmer type can be used to directly connect to and program a chip
 using the built in interfaces on the computer. The requirements to use
 this type are that an SPI interface is exposed along with one GPIO
 pin. The GPIO serves as the reset output since the Linux SPI drivers
-do not hold slave select down when a transfer is not occuring and thus
+do not hold chip select down when a transfer is not occuring and thus
 it cannot be used as the reset pin. A readily available level
 translator should be used between the SPI bus/reset GPIO and the chip
 to avoid potentially damaging the computer's SPI controller in the
@@ -195,7 +196,7 @@ the level translator to protect the hardware from damage.
 On a Raspberry Pi, header J8 provides access to the SPI and GPIO
 lines.
 
-Typically, pins 19, 21, and 23 are SPI MOSI, MISO, and SCK, while
+Typically, pins 19, 21, and 23 are SPI SDO, SDI, and SCK, while
 pins 24 and 26 would serve as CE outputs. So, close to these pins
 is pin 22 as GPIO25 which can be used as /RESET, and pin 25 can
 be used as GND.
@@ -204,10 +205,10 @@ A typical programming cable would then look like:
 
 @multitable @columnfractions .15 .15 .3
 @item @code{J8 pin} @tab @code{ISP pin} @tab @code{Name}
-@item @code{21}     @tab @code{1}   @tab @code{MISO}
+@item @code{21}     @tab @code{1}   @tab @code{SDI}
 @item @code{-}      @tab @code{2}   @tab @code{Vcc - leave open}
 @item @code{23}     @tab @code{3}   @tab @code{SCK}
-@item @code{19}     @tab @code{4}   @tab @code{MOSI}
+@item @code{19}     @tab @code{4}   @tab @code{SDO}
 @item @code{22}     @tab @code{5}   @tab @code{/RESET}
 @item @code{25}     @tab @code{6}   @tab @code{GND}
 @end multitable
@@ -223,7 +224,7 @@ programmers communicate through the USB, using @code{libusb} as a
 platform abstraction layer.
 The avrftdi adds support for the FT2232C/D, FT2232H, and FT4232H devices. These all use 
 the MPSSE mode, which has a specific pin mapping. Bit 1 (the lsb of the byte in the config
-file) is SCK. Bit 2 is MOSI, and Bit 3 is MISO. Bit 4 usually reset. The 2232C/D parts
+file) is SCK. Bit 2 is SDO, and Bit 3 is SDI. Bit 4 usually reset. The 2232C/D parts
 are only supported on interface A, but the H parts can be either A or B (specified by the
 usbdev config parameter).
 The STK500, STK600, JTAG ICE, and avr910 contain on-board logic to control the programming of the target
@@ -279,13 +280,21 @@ the -D option will likely be required in this case, because the
 bootloader will rewrite the program memory, but no true chip erase can
 be performed.
 
-The Arduino (which is very similar to the STK500 1.x) is supported via
-its own programmer type specification ``arduino''.  This programmer works for
+Serial bootloaders that run a skeleton of the STK500 1.x protocol are supported via
+their own programmer type specification ``arduino''.  This programmer works for
 the Arduino Uno Rev3 or any AVR that runs the Optiboot bootloader.
 The number of connection retry attempts can be specified as an
 extended parameter. See the section on
 @emph{extended parameters}
 below for details.
+
+Urprotocol is a leaner version of the STK500 1.x protocol that is designed
+to be backwards compatible with STK500 v1.x; it allows bootloaders to be
+much smaller, eg, as implemented in the urboot project
+@uref{https://github.com/stefanrueger/urboot}. The programmer type ``urclock''
+caters for these urboot programmers. Owing to its backward compatibility,
+bootloaders that can be served by the arduino programmer can normally
+also be served by the urclock programmer.
 
 The BusPirate is a versatile tool that can also be used as an AVR programmer.
 A single BusPirate can be connected to up to 3 independent AVRs. See
@@ -939,6 +948,117 @@ The Arduino programmer type accepts the following extended parameter:
 Overide the default number of connection retry attempt by using @var{VALUE}.
 @end table
 
+@cindex @code{-x} Urclock
+@item Urclock
+
+The urclock programmer type accepts the following extended parameters:
+@table @code
+@item @samp{showall}
+Show all info for the connected part, then exit. The @code{-xshow...} options
+below can be used to assemble a bespoke response consisting of a subset
+(or only one item) of all available relevant information about the
+connected part and bootloader.
+@item @samp{showid}
+Show a unique Urclock ID stored in either flash or EEPROM of the MCU, then exit.
+@item @samp{id=<E|F>.<addr>.<len>}
+Historically, the Urclock ID was a six-byte unique little-endian number
+stored in Urclock boards at EEPROM address 257. The location of this
+number can be set by the @code{-xid=<E|F>.<addr>.<len>} extended parameter. @code{E}
+stands for EEPROM and @code{F} stands for flash. A negative address addr counts
+from the end of EEPROM and flash, respectively. The length len of the
+Urclock ID can be between 1 and 8 bytes.
+@item @samp{showdate}
+Show the last-modified date of the input file for the flash application,
+then exit. If the input file was stdin, the date will be that of the
+programming. Date and filename are part of the metadata that the urclock
+programmer stores by default in high flash just under the bootloader; see also
+@code{-xnometadata}.
+@item @samp{showfilename}
+Show the input filename (or title) of the last flash writing session, then exit.
+@item @samp{title=<string>}
+When set, <string> will be used in lieu of the input filename. The maximum
+string length for the title/filename field is 254 bytes including
+terminating nul.
+@item @samp{showapp}
+Show the size of the programmed application, then exit.
+@item @samp{showstore}
+Show the size of the unused flash between the application and metadata, then exit.
+@item @samp{showmeta}
+Show the size of the metadata just below the bootloader, then exit.
+@item @samp{showboot}
+Show the size of the bootloader, then exit.
+@item @samp{showversion}
+Show bootloader version and capabilities, then exit.
+@item @samp{showvector}
+Show the vector number and name of the interrupt table vector used by the
+bootloader for starting the application, then exit. For hardware-supported
+bootloaders this will be vector 0 (Reset), and for vector bootloaders this
+will be any other vector number of the interrupt vector table or the slot
+just behind the vector table with the name @code{VBL_ADDITIONAL_VECTOR}.
+@item @samp{showpart}
+Show the part for which the bootloader was compiled, then exit.
+@item @samp{bootsize=<size>}
+Manual override for bootloader size. Urboot bootloaders put the number of
+used bootloader pages into a table at the top of the bootloader section,
+ie, typically top of flash, so the urclock programmer can look up the
+bootloader size itself. In backward-compatibility mode, when programming
+via other bootloaders, this option can be used to tell the programmer the
+size, and therefore the location, of the bootloader.
+@item @samp{vectornum=<arg>}
+Manual override for vector number. Urboot bootloaders put the vector
+number used by a vector bootloader into a table at the top of flash, so
+this option is normally not needed for urboot bootloaders. However, it is
+useful in backward-compatibility mode (or when the urboot bootloader does
+not offer flash read). Specifying a vector number in these circumstances
+implies a vector bootloader whilst the default assumption would be a
+hardware-supported bootloader.
+@item @samp{eepromrw}
+Manual override for asserting EEPROM read/write capability. Not normally
+needed for urboot bootloaders, but useful for in backward-compatibility
+mode if the bootloader offers EEPROM read/write.
+@item @samp{emulate_ce}
+If an urboot bootloader does not offer a chip erase command it will tell
+the urclock programmer so during handshake. In this case the urclock
+programmer emulates a chip erase, if warranted by user command line
+options, by filling the remainder of unused flash below the bootloader
+with 0xff. If this option is specified, the urclock programmer will assume
+that the bootloader cannot erase the chip itself. The option is useful
+for backwards-compatible bootloaders that do not implement chip erase.
+@item @samp{restore}
+Upload unchanged flash input files and trim below the bootloader if
+needed. This is most useful when one has a backup of the full flash and
+wants to play that back onto the device. No metadata are written in this
+case and no vector patching happens either if it is a vector bootloader.
+However, for vector bootloaders, even under the option @code{-xrestore} an
+input file will not be uploaded for which the reset vector does not point
+to the vector bootloader. This is to avoid writing an input file to the
+device that would render the vector bootloader not functional as it would
+not be reached after reset.
+@item @samp{initstore}
+On writing to flash fill the store space between the flash application and
+the metadata section with 0xff.
+@item @samp{nofilename}
+On writing to flash do not store the application input filename (nor a title).
+@item @samp{nodate}
+On writing to flash do not store the application input filename (nor a
+title) and no date either.
+@item @samp{nometadata}
+On writing to flash do not store any metadata. The full flash below the
+bootloader is available for the application. In particular, no data store
+frame is programmed.
+@item @samp{delay=<n>}
+Add a <n> ms delay after reset. This can be useful if a board takes a
+particularly long time to exit from external reset. <n> can be negative,
+in which case the default 110-140 ms delay after issuing reset will be
+shortened accordingly.
+@item @samp{strict}
+Urclock has a faster, but slightly different strategy than -c arduino to
+synchronise with the bootloader; some stk500v1 bootloaders cannot cope
+with this, and they need the @code{-xstrict} option.
+@item @samp{help}
+Show this help menu and exit
+@end table
+
 @cindex @code{-x} Buspirate
 @item BusPirate
 
@@ -947,7 +1067,7 @@ The BusPirate programmer type accepts the following extended parameters:
 @item @samp{reset=cs,aux,aux2}
 The default setup assumes the BusPirate's CS output pin connected to
 the RESET pin on AVR side. It is however possible to have multiple AVRs
-connected to the same BP with MISO, MOSI and SCK lines common for all of them.
+connected to the same BP with SDI, SDO and SCK lines common for all of them.
 In such a case one AVR should have its RESET connected to BusPirate's
 @emph{CS}
 pin, second AVR's RESET connected to BusPirate's
@@ -1075,7 +1195,7 @@ Connection to the PICkit2 programmer:
 @item @code{RST} @tab      @code{VPP/MCLR (1) }
 @item @code{VDD} @tab      @code{VDD Target (2) -- possibly optional if AVR self powered }
 @item @code{GND} @tab      @code{GND (3) }
-@item @code{MISO} @tab      @code{PGD (4) }
+@item @code{SDI} @tab      @code{PGD (4) }
 @item @code{SCLK} @tab      @code{PDC (5) }
 @item @code{OSI} @tab      @code{AUX (6) }
 @end multitable
@@ -1429,15 +1549,20 @@ numbers are treated as signed unless they have a @code{U} suffix. Unsigned
 integers cannot be larger than 2^64-1. If @var{n} is an unsigned integer then @var{-n}
 is also a valid unsigned integer as in C. Signed integers must fall into
 the [-2^63, 2^63-1] range or a correspondingly smaller range when a suffix
-specifies a smaller type. Out of range signed numbers trigger a warning.
+specifies a smaller type.
 
 Ordinary @code{0x} hex integers with @var{n} hex digits (counting leading
-zeros) use the smallest size of 1, 2, 4 and 8 bytes that can accommodate
-any n-digit hex integer. If an integer suffix specifies a size explicitly
-the corresponding number of least significant bytes are written.
-Otherwise, signed and unsigned integers alike occupy the smallest of 1, 2,
-4, or 8 bytes needed to accommodate them in their respective
-representation.
+zeros) use the smallest size of one, two, four and eight bytes that can
+accommodate any n-digit hex integer. If an integer suffix specifies a size
+explicitly the corresponding number of least significant bytes are
+written, and a warning shown if the number does not fit into the desired
+representation. Otherwise, unsigned integers occupy the smallest of one,
+two, four or eight bytes needed. Signed numbers are allowed to fit into
+the smallest signed or smallest unsigned representation: For example,
+@code{255} is stored as one byte as @code{255U} would fit in one byte,
+though as a signed number it would not fit into a one-byte interval [-128,
+127]. The number @code{-1} is stored in one byte whilst @code{-1U} needs
+eight bytes as it is the same as @code{0xFFFFffffFFFFffffU}.
 
 One trailing comma at the end of data items is ignored to facilitate copy
 and paste of lists.
@@ -1513,9 +1638,9 @@ command. When using direct SPI mode, up to 3 bytes
 can be omitted.
 
 @item spi
-Enter direct SPI mode.  The @emph{pgmled} pin acts as slave select.
+Enter direct SPI mode.  The @emph{pgmled} pin acts as chip select.
 @emph{Only supported on parallel bitbang programmers, and partially by USBtiny.}
-Slave Select must be externally held low for direct SPI when
+Chip Select must be externally held low for direct SPI when
 using USBtinyISP, and send must be a multiple of four bytes.
 
 @item pgm
@@ -1533,12 +1658,12 @@ selected by the optional parameter @var{channel} (either
 0 or 1).
 
 @item fosc @var{freq}[@code{M}|@code{k}]
-Set the master oscillator to @var{freq} Hz.
+Set the programming oscillator to @var{freq} Hz.
 An optional trailing letter @code{M}
 multiplies by 1E6, a trailing letter @code{k} by 1E3.
 
 @item fosc off
-Turn the master oscillator off.
+Turn the programming oscillator off.
 
 @item sck @var{period}
 @emph{STK500 and STK600 only:}
@@ -1553,7 +1678,7 @@ ISP clock period when operating the ICE in ISP mode.
 
 @item parms
 @emph{STK500 and STK600 only:}
-Display the current voltage and master oscillator parameters.
+Display the current voltage and programming oscillator parameters.
 @emph{JTAG ICE only:}
 Display the current target supply voltage and JTAG bit clock rate/period.
 
@@ -1794,8 +1919,8 @@ programmer
     buff     = <pin1> [, <pin2> ... ] ;       # pin number(s)
     reset    = <pin> ;                        # pin number
     sck      = <pin> ;                        # pin number
-    mosi     = <pin> ;                        # pin number
-    miso     = <pin> ;                        # pin number
+    sdo      = <pin> ;                        # pin number
+    sdi      = <pin> ;                        # pin number
     errled   = <pin> ;                        # pin number
     rdyled   = <pin> ;                        # pin number
     pgmled   = <pin> ;                        # pin number
@@ -1860,7 +1985,9 @@ part
     prog_modes       = PM_<i/f> @{| PM_<i/f>@}  # interfaces, eg, PM_SPM|PM_ISP|PM_HVPP|PM_debugWIRE
     mcuid            = <num>;                 # unique id in 0..2039 for 8-bit AVRs
     n_interrupts     = <num>;                 # number of interrupts, used for vector bootloaders
-    n_page_erase     = <num>;                 # if set, number of pages erased during NVM erase
+    n_page_erase     = <num>;                 # if set, number of pages erased during SPM erase
+    n_boot_sections  = <num>;                 # Number of boot sections
+    boot_section_size = <num>;                # Size of (smallest) boot section, if any
     hvupdi_variant   = <num> ;                # numeric -1 (n/a) or 0..2
     devicecode       = <num> ;                # deprecated, use stk500_devcode
     stk500_devcode   = <num> ;                # numeric
@@ -1917,19 +2044,22 @@ part
     programfusepolltimeout = <num> ;
     programlockpulsewidth = <num> ;           # PP only
     programlockpolltimeout = <num> ;
-    # JTAG ICE mkII parameters, also from ATDF files
+    # debugWIRE and/or JTAG ICE mkII parameters, also from ATDF files
     allowfullpagebitstream = <yes/no> ;
     enablepageprogramming = <yes/no> ;
     idr              = <num> ;                # IO addr of IDR (OCD) reg
     rampz            = <num> ;                # IO addr of RAMPZ reg
     spmcr            = <num> ;                # mem addr of SPMC[S]R reg
     eecr             = <num> ;                # mem addr of EECR reg only when != 0x3f
+    eind             = <num> ;                # mem addr of EIND reg
     mcu_base         = <num> ;
     nvm_base         = <num> ;
     ocd_base         = <num> ;
     ocdrev           = <num> ;
     pgm_enable       = <instruction format> ;
     chip_erase       = <instruction format> ;
+    # parameters for bootloaders
+    autobaud_sync    = <num> ;                # autobaud detection byte, default 0x30
 
     memory <memtype>
         paged           = <yes/no> ;          # yes/no (flash only, do not use for EEPROM)
@@ -1962,14 +2092,14 @@ part
 @end smallexample
 
 @noindent
-If any of the above parameters are not specified, the default value
-of 0 is used for numerics (except for @code{mcuid}, @code{hvupdi_variant} and @code{ocdrev},
-where the default value is -1) or the empty string @code{""} for string
-values. If a required parameter is left empty, AVRDUDE will complain.
-Almost all occurrences of numbers (with the exception of pin numbers
-and where they are separated by space, eg, in signature and readback)
-can also be given as simple expressions involving arithemtic and
-bitwise operators.
+If any of the above parameters are not specified, the default value of 0
+is used for numerics (except for @code{mcuid}, @code{hvupdi_variant} and
+@code{ocdrev}, where the default value is -1, and for @code{autobaud_sync}
+which defaults to 0x30) or the empty string @code{""} for string values.
+If a required parameter is left empty, AVRDUDE will complain. Almost all
+occurrences of numbers (with the exception of pin numbers and where they
+are separated by space, eg, in signature and readback) can also be given
+as simple expressions involving arithemtic and bitwise operators.
 
 @menu
 * Parent Part::
@@ -2952,10 +3082,10 @@ Solution: Use the 6 pin ISP header on the Dragon and the following pin mapping:
 @multitable @columnfractions .2 .2
 @item @strong{Dragon} @tab @strong{Target}
 @item @strong{ISP Header} @tab @strong{pins}
-@item 1 (MISO)  @tab PDI_DATA
+@item 1 (SDI)   @tab PDI_DATA
 @item 2 (VCC)   @tab VCC
 @item 3 (SCK)   @tab 
-@item 4 (MOSI)  @tab 
+@item 4 (SDO)   @tab
 @item 5 (RESET) @tab PDI_CLK / RST
 @item 6 (GND)   @tab GND
 @end multitable
@@ -2969,10 +3099,10 @@ Solution: Use the following pin mapping:
 @multitable @columnfractions .2 .2 .2
 @item @strong{AVRISP} @tab @strong{Target} @tab @strong{ATtiny}
 @item @strong{connector} @tab @strong{pins} @tab @strong{pin #}
-@item 1 (MISO)  @tab TPIDATA  @tab 1
+@item 1 (SDI)   @tab TPIDATA  @tab 1
 @item 2 (VTref) @tab Vcc      @tab 5
 @item 3 (SCK)   @tab TPICLK   @tab 3
-@item 4 (MOSI)  @tab          @tab
+@item 4 (SDO)   @tab          @tab
 @item 5 (RESET) @tab /RESET   @tab 6
 @item 6 (GND)   @tab GND      @tab 2
 @end multitable
@@ -2982,10 +3112,10 @@ Problem: I want to program an ATtiny4/5/9/10 device using a serial/parallel
 bitbang programmer.  How to connect the pins?
 
 Solution: Since TPI has only 1 pin for bi-directional data transfer, both 
-@var{MISO} and @var{MOSI} pins should be connected to the @var{TPIDATA} pin 
+@var{SDI} and @var{SDO} pins should be connected to the @var{TPIDATA} pin
 on the ATtiny device.
-However, a 1K resistor should be placed between the @var{MOSI} and @var{TPIDATA}.
-The @var{MISO} pin connects to @var{TPIDATA} directly.
+However, a 1K resistor should be placed between the @var{SDO} and @var{TPIDATA}.
+The @var{SDI} pin connects to @var{TPIDATA} directly.
 The @var{SCK} pin is connected to @var{TPICLK}.
 
 In addition, the @var{Vcc}, @var{/RESET} and @var{GND} pins should 
@@ -3003,12 +3133,12 @@ front of pins 7, 4, 3 and 8):
 @example
 programmer
   id    = "dasa_ftdi";
-  desc  = "serial port banging, reset=rts sck=dtr mosi=txd miso=cts";
+  desc  = "serial port banging, reset=rts sck=dtr sdo=txd sdi=cts";
   type  = serbb;
   reset = ~7;
   sck   = ~4;
-  mosi  = ~3;
-  miso  = ~8;
+  sdo   = ~3;
+  sdi   = ~8;
 ;
 @end example
 

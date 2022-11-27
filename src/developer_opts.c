@@ -56,7 +56,7 @@
 // Inject part parameters into a semi-automated rewrite of avrdude.conf
 //  - Add entries to the tables below; they get written on -p*/si or -c*/si
 //  - Use the output in a new avrdude.conf
-//  - Output again with -p* or -c* (no /i) and use that for final avrdude.conf
+//  - Output again with -p*/s or -c*/s (no /i) and use that for final avrdude.conf
 //  - Remove entries from below tables
 
 static struct {
@@ -615,7 +615,7 @@ static void dev_part_strct(const AVRPART *p, bool tsv, const AVRPART *base, bool
       dev_print_comment(cp->comms);
 
     if(p->parent_id && *p->parent_id)
-      dev_info("part parent %s\n", p->parent_id);
+      dev_info("part parent \"%s\"\n", p->parent_id);
     else
       dev_info("part\n");
   }
@@ -627,6 +627,8 @@ static void dev_part_strct(const AVRPART *p, bool tsv, const AVRPART *base, bool
   _if_partout(intcmp, "%d", mcuid);
   _if_partout(intcmp, "%d", n_interrupts);
   _if_partout(intcmp, "%d", n_page_erase);
+  _if_partout(intcmp, "%d", n_boot_sections);
+  _if_partout(intcmp, "%d", boot_section_size);
   _if_partout(intcmp, "%d", hvupdi_variant);
   _if_partout(intcmp, "0x%02x", stk500_devcode);
   _if_partout(intcmp, "0x%02x", avr910_devcode);
@@ -710,10 +712,12 @@ static void dev_part_strct(const AVRPART *p, bool tsv, const AVRPART *base, bool
   _if_partout(intcmp, "0x%02x", rampz);
   _if_partout(intcmp, "0x%02x", spmcr);
   _if_partout(intcmp, "0x%02x", eecr);
+  _if_partout(intcmp, "0x%02x", eind);
   _if_partout(intcmp, "0x%04x", mcu_base);
   _if_partout(intcmp, "0x%04x", nvm_base);
   _if_partout(intcmp, "0x%04x", ocd_base);
   _if_partout(intcmp, "%d", ocdrev);
+  _if_partout(intcmp, "0x%02x", autobaud_sync);
 
   for(int i=0; i < AVR_OP_MAX; i++)
     if(!base || opcodecmp(p->op[i], base->op[i], i))
@@ -799,7 +803,7 @@ static void dev_part_strct(const AVRPART *p, bool tsv, const AVRPART *base, bool
 }
 
 
-void dev_output_pgm_part(int dev_opt_c, char *programmer, int dev_opt_p, char *partdesc) {
+void dev_output_pgm_part(int dev_opt_c, const char *programmer, int dev_opt_p, const char *partdesc) {
   if(dev_opt_c == 2 && dev_opt_p == 2) {
     char *p;
 
@@ -1152,9 +1156,9 @@ static void dev_pgm_raw(const PROGRAMMER *pgm) {
     dev_raw_dump(dp.usbproduct, strlen(dp.usbproduct)+1, id, "usbprod", 0);
 
   // Zap all bytes beyond terminating nul of desc, type and port array
-  if((len = strlen(dp.type)+1) < sizeof dp.type)
+  if((len = (int) strlen(dp.type)+1) < (int) sizeof dp.type)
     memset(dp.type + len, 0, sizeof dp.type - len);
-  if((len = strlen(dp.port)+1) < sizeof dp.port)
+  if((len = (int) strlen(dp.port)+1) < (int) sizeof dp.port)
     memset(dp.port + len, 0, sizeof dp.port - len);
 
   // Zap address values

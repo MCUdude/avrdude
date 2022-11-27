@@ -51,16 +51,20 @@ case "${ostype}" in
 	    build_flags="${build_flags} -D CMAKE_C_FLAGS=-I/opt/local/include -D CMAKE_EXE_LINKER_FLAGS=-L/opt/local/lib"
 	else
             # Apple M1 (may be new version of homebrew also)
-            if [ -d /opt/homebrew ]  
+            if [ -d /opt/homebrew ]
             then
-                build_flags="${build_flags} -D CMAKE_C_FLAGS=-I/opt/homebrew/include -D CMAKE_EXE_LINKER_FLAGS=-L/opt/homebrew/Cellar -D HAVE_LIBREADLINE:FILEPATH=/opt/homebrew/lib/libreadline.dylib"
+                build_flags="${build_flags} -D CMAKE_C_FLAGS=-I/opt/homebrew/include -D CMAKE_EXE_LINKER_FLAGS=-L/opt/homebrew/Cellar"
             else
-                build_flags="${build_flags} -D CMAKE_C_FLAGS=-I/usr/local/include -D CMAKE_EXE_LINKER_FLAGS=-L/usr/local/Cellar -D HAVE_LIBREADLINE:FILEPATH=/usr/local/lib/libreadline.dylib"
+                build_flags="${build_flags} -D CMAKE_C_FLAGS=-I/usr/local/include -D CMAKE_EXE_LINKER_FLAGS=-L/usr/local/Cellar"
             fi
 	fi
 	;;
 
-    freebsd)
+    netbsd)
+	build_flags="${build_flags} -D CMAKE_C_FLAGS=-I/usr/pkg/include -D CMAKE_EXE_LINKER_FLAGS=-L/usr/pkg/lib"
+	;;
+
+    *bsd)
 	build_flags="${build_flags} -D CMAKE_C_FLAGS=-I/usr/local/include -D CMAKE_EXE_LINKER_FLAGS=-L/usr/local/lib"
 	;;
 esac

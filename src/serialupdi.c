@@ -207,18 +207,15 @@ static int serialupdi_wait_for_unlock(const PROGRAMMER *pgm, unsigned int ms) {
 */  
   unsigned long start_time;
   unsigned long current_time;
-  struct timeval tv;
   uint8_t status;
-  gettimeofday (&tv, NULL);
-  start_time = (tv.tv_sec * 1000000) + tv.tv_usec;
+  start_time = avr_ustimestamp();
   do {
     if (updi_read_cs(pgm, UPDI_ASI_SYS_STATUS, &status) >= 0) {
       if (!(status & (1 << UPDI_ASI_SYS_STATUS_LOCKSTATUS))) {
         return 0;
       }
     }
-    gettimeofday (&tv, NULL);
-    current_time = (tv.tv_sec * 1000000) + tv.tv_usec;
+    current_time = avr_ustimestamp();
   } while ((current_time - start_time) < (ms * 1000));
 
   pmsg_error("timeout waiting for device to unlock\n");
@@ -256,10 +253,8 @@ static int serialupdi_wait_for_urow(const PROGRAMMER *pgm, unsigned int ms, urow
 */  
   unsigned long start_time;
   unsigned long current_time;
-  struct timeval tv;
   uint8_t status;
-  gettimeofday (&tv, NULL);
-  start_time = (tv.tv_sec * 1000000) + tv.tv_usec;
+  start_time = avr_ustimestamp();
   do {
     if (updi_read_cs(pgm, UPDI_ASI_SYS_STATUS, &status) >= 0) {
       if (mode == WAIT_FOR_UROW_HIGH) {
@@ -272,8 +267,7 @@ static int serialupdi_wait_for_urow(const PROGRAMMER *pgm, unsigned int ms, urow
         }
       }
     }
-    gettimeofday (&tv, NULL);
-    current_time = (tv.tv_sec * 1000000) + tv.tv_usec;
+    current_time = avr_ustimestamp();
   } while ((current_time - start_time) < (ms * 1000));
 
   pmsg_error("timeout waiting for device to complete UROW WRITE\n");
@@ -881,8 +875,7 @@ static int serialupdi_chip_erase(const PROGRAMMER *pgm, const AVRPART *p) {
 static int serialupdi_page_erase(const PROGRAMMER *pgm, const AVRPART *p, const AVRMEM *m,
                                  unsigned int baseaddr)
 {
-  pmsg_error("page erase not implemented yet\n");
-  return -1;
+  return updi_nvm_erase_flash_page(pgm, p, m->offset + baseaddr);
 }
 
 static int serialupdi_read_signature(const PROGRAMMER *pgm, const AVRPART *p, const AVRMEM *m) {

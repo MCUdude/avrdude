@@ -188,7 +188,7 @@ void free_update(UPDATE * u)
 
 
 // Memory statistics considering holes after a file read returned size bytes
-int memstats(struct avrpart *p, char *memtype, int size, Filestats *fsp) {
+int memstats(const AVRPART *p, const char *memtype, int size, Filestats *fsp) {
   Filestats ret = { 0 };
   AVRMEM *mem = avr_locate_mem(p, memtype);
 
@@ -332,7 +332,7 @@ int update_is_readable(const char *fn) {
 }
 
 
-static void ioerror(const char *iotype, UPDATE *upd) {
+static void ioerror(const char *iotype, const UPDATE *upd) {
   int errnocp = errno;
 
   pmsg_ext_error("file %s is not %s: ", update_outname(upd->filename), iotype);
@@ -344,7 +344,7 @@ static void ioerror(const char *iotype, UPDATE *upd) {
 }
 
 // Basic checks to reveal serious failure before programming
-int update_dryrun(struct avrpart *p, UPDATE *upd) {
+int update_dryrun(const AVRPART *p, UPDATE *upd) {
   static char **wrote;
   static int nfwritten;
 
@@ -426,13 +426,12 @@ int update_dryrun(struct avrpart *p, UPDATE *upd) {
 }
 
 
-int do_op(PROGRAMMER * pgm, struct avrpart * p, UPDATE * upd, enum updateflags flags)
-{
-  struct avrpart * v;
-  AVRMEM * mem;
+int do_op(const PROGRAMMER *pgm, const AVRPART *p, UPDATE *upd, enum updateflags flags) {
+  AVRPART *v;
+  AVRMEM *mem;
   int size;
   int rc;
-  Filestats fs;
+  Filestats fs, fs_patched;
 
   mem = avr_locate_mem(p, upd->memtype);
   if (mem == NULL) {
@@ -486,11 +485,11 @@ int do_op(PROGRAMMER * pgm, struct avrpart * p, UPDATE * upd, enum updateflags f
       pmsg_error("read from file %s failed\n", update_inname(upd->filename));
       return LIBAVRDUDE_GENERAL_FAILURE;
     }
-    size = rc;
+
     pmsg_info("reading input file %s for %s%s\n",
       update_inname(upd->filename), mem->desc, alias_mem_desc);
 
-    if(memstats(p, upd->memtype, size, &fs) < 0)
+    if(memstats(p, upd->memtype, rc, &fs) < 0)
       return LIBAVRDUDE_GENERAL_FAILURE;
 
     imsg_info("with %d byte%s in %d section%s within %s\n",
@@ -506,6 +505,38 @@ int do_op(PROGRAMMER * pgm, struct avrpart * p, UPDATE * upd, enum updateflags f
           fs.ntrailing, update_plural(fs.ntrailing));
       msg_info("\n");
     }
+
+    // Patch flash input, eg, for vector bootloaders
+    if(pgm->flash_readhook) {
+      AVRMEM *mem = avr_locate_mem(p, upd->memtype);
+      if(mem && !strcmp(mem->desc, "flash")) {
+        rc = pgm->flash_readhook(pgm, p, mem, upd->filename, rc);
+        if (rc < 0) {
+          pmsg_notice("readhook for file %s failed\n", update_inname(upd->filename));
+          return LIBAVRDUDE_GENERAL_FAILURE;
+        }
+        if(memstats(p, upd->memtype, rc, &fs_patched) < 0)
+          return LIBAVRDUDE_GENERAL_FAILURE;
+        if(memcmp(&fs_patched, &fs, sizeof fs)) {
+          pmsg_info("preparing flash input for device%s\n",
+            pgm->prog_modes & PM_SPM? " bootloader": "");
+            imsg_notice2("with %d byte%s in %d section%s within %s\n",
+              fs_patched.nbytes, update_plural(fs_patched.nbytes),
+              fs_patched.nsections, update_plural(fs_patched.nsections),
+              update_interval(fs_patched.firstaddr, fs_patched.lastaddr));
+            if(mem->page_size > 1) {
+              imsg_notice2("using %d page%s and %d pad byte%s",
+                fs_patched.npages, update_plural(fs_patched.npages),
+                fs_patched.nfill, update_plural(fs_patched.nfill));
+              if(fs_patched.ntrailing)
+                msg_notice2(", and %d trailing 0xff byte%s",
+                  fs_patched.ntrailing, update_plural(fs_patched.ntrailing));
+              msg_notice2("\n");
+            }
+        }
+      }
+    }
+    size = rc;
 
     // Write the buffer contents to the selected memory type
     pmsg_info("writing %d byte%s %s%s ...\n", fs.nbytes,
@@ -529,8 +560,7 @@ int do_op(PROGRAMMER * pgm, struct avrpart * p, UPDATE * upd, enum updateflags f
     pmsg_info("%d byte%s of %s%s written\n", fs.nbytes,
       update_plural(fs.nbytes), mem->desc, alias_mem_desc);
 
-    // Fall through for (default) auto verify, ie, unless -V was specified
-    if (!(flags & UF_VERIFY))
+    if (!(flags & UF_VERIFY))   // Fall through for auto verify unless -V was specified
       break;
 
   case DEVICE_VERIFY:
@@ -585,7 +615,7 @@ int do_op(PROGRAMMER * pgm, struct avrpart * p, UPDATE * upd, enum updateflags f
     if (quell_progress < 2)
       pmsg_notice2("verifying ...\n");
 
-    rc = avr_verify(p, v, upd->memtype, size);
+    rc = avr_verify(pgm, p, v, upd->memtype, size);
     if (rc < 0) {
       pmsg_error("verification mismatch\n");
       pgm->err_led(pgm, ON);

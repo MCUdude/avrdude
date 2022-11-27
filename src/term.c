@@ -44,6 +44,8 @@
 
 #ifdef WIN32
 #include <windows.h>
+#else
+#include <sys/select.h>
 #endif
 #endif
 
@@ -185,7 +187,7 @@ static int chardump_line(char *buffer, unsigned char *p, int n, int pad) {
   unsigned char b[128];
 
   // Sanity check
-  n = n < 1? 1: n > sizeof b? sizeof b: n;
+  n = n < 1? 1: n > (int) sizeof b? (int) sizeof b: n;
 
   memcpy(b, p, n);
   for (int i = 0; i < n; i++)
@@ -390,15 +392,19 @@ static int cmd_write(PROGRAMMER *pgm, AVRPART *p, int argc, char *argv[]) {
       "unless they have a U suffix. Unsigned integers cannot be larger than 2^64-1.\n"
       "If n is an unsigned integer then -n is also a valid unsigned integer as in C.\n"
       "Signed integers must fall into the [-2^63, 2^63-1] range or a correspondingly\n"
-      "smaller range when a suffix specifies a smaller type. Out of range signed\n"
-      "numbers trigger a warning.\n"
+      "smaller range when a suffix specifies a smaller type.\n"
       "\n"
       "Ordinary 0x hex integers with n hex digits (counting leading zeros) use the\n"
-      "smallest size of 1, 2, 4 and 8 bytes that can accommodate any n-digit hex\n"
-      "integer. If an integer suffix specifies a size explicitly the corresponding\n"
-      "number of least significant bytes are written. Otherwise, signed and unsigned\n"
-      "integers alike occupy the smallest of 1, 2, 4, or 8 bytes needed to\n"
-      "accommodate them in their respective representation.\n"
+      "smallest size of one, two, four and eight bytes that can accommodate any\n"
+      "n-digit hex integer. If an integer suffix specifies a size explicitly the\n"
+      "corresponding number of least significant bytes are written, and a warning\n"
+      "shown if the number does not fit into the desired representation. Otherwise,\n"
+      "unsigned integers occupy the smallest of one, two, four or eight bytes\n"
+      "needed. Signed numbers are allowed to fit into the smallest signed or\n"
+      "smallest unsigned representation: For example, 255 is stored as one byte as\n"
+      "255U would fit in one byte, though as a signed number it would not fit into a\n"
+      "one-byte interval [-128, 127]. The number -1 is stored in one byte whilst -1U\n"
+      "needs eight bytes as it is the same as 0xFFFFffffFFFFffffU.\n"
     );
     return -1;
   }
@@ -530,12 +536,12 @@ static int cmd_write(PROGRAMMER *pgm, AVRPART *p, int argc, char *argv[]) {
                 data.size = nhexdigs > 8? 8: nhexdigs > 4? 4: nhexdigs > 2? 2: 1;
 
               } else if(is_signed) {
-                // Smallest size that fits signed representation
+                // Smallest size that fits signed or unsigned (asymmetric to meet user expectation)
                 data.size =
                   is_outside_int64_t? 8:
-                  data.ll < INT32_MIN || data.ll > INT32_MAX? 8:
-                  data.ll < INT16_MIN || data.ll > INT16_MAX? 4:
-                  data.ll < INT8_MIN  || data.ll > INT8_MAX? 2: 1;
+                  data.ll < INT32_MIN || data.ll > (long long) UINT32_MAX? 8:
+                  data.ll < INT16_MIN || data.ll > (long long) UINT16_MAX? 4:
+                  data.ll < INT8_MIN  || data.ll > (long long) UINT8_MAX? 2: 1;
 
               } else {
                 // Smallest size that fits unsigned representation
@@ -564,9 +570,11 @@ static int cmd_write(PROGRAMMER *pgm, AVRPART *p, int argc, char *argv[]) {
               }
             } else if(nl==2 && nh==0 && ns==0) { // LL
               data.size = 8;
+              if(is_outside_int64_t || is_signed)
+                is_out_of_range = 1;
             }
 
-            if(is_outside_int64_t || is_out_of_range)
+            if(is_out_of_range)
               pmsg_error("(write) %s out of int%d_t range, "
                 "interpreted as %d-byte %lld; consider 'U' suffix\n", argi, data.size*8, data.size, (long long int) data.ll);
           }
@@ -662,19 +670,21 @@ static int cmd_write(PROGRAMMER *pgm, AVRPART *p, int argc, char *argv[]) {
   report_progress(0, 1, avr_has_paged_access(pgm, mem)? "Caching": "Writing");
   for (i = 0; i < len + data.bytes_grown; i++) {
     int rc = pgm->write_byte_cached(pgm, p, mem, addr+i, buf[i]);
-    if (rc) {
+    if (rc == LIBAVRDUDE_SOFTFAIL) {
+      pmsg_warning("(write) programmer write protects %s address 0x%04x\n", mem->desc, addr+i);
+    } else if(rc) {
       pmsg_error("(write) error writing 0x%02x at 0x%05lx, rc=%d\n", buf[i], (long) addr+i, (int) rc);
       if (rc == -1)
         imsg_error("%*swrite operation not supported on memory type %s\n", 8, "", mem->desc);
       werror = true;
-    }
-
-    uint8_t b;
-    rc = pgm->read_byte_cached(pgm, p, mem, addr+i, &b);
-    if (b != buf[i]) {
-      pmsg_error("(write) error writing 0x%02x at 0x%05lx cell=0x%02x\n", buf[i], (long) addr+i, b);
-      werror = true;
-    }
+    } else {
+      uint8_t b;
+      rc = pgm->read_byte_cached(pgm, p, mem, addr+i, &b);
+      if (b != buf[i]) {
+        pmsg_error("(write) verification error writing 0x%02x at 0x%05lx cell=0x%02x\n", buf[i], (long) addr+i, b);
+        werror = true;
+      }
+   }
 
     if (werror)
       pgm->err_led(pgm, ON);
@@ -753,8 +763,47 @@ static int cmd_send(PROGRAMMER *pgm, AVRPART *p, int argc, char *argv[]) {
 
 static int cmd_erase(PROGRAMMER *pgm, AVRPART *p, int argc, char *argv[]) {
   term_out("erasing chip ...\n");
+
   // Erase chip and clear cache
-  pgm->chip_erase_cached(pgm, p);
+  int rc = pgm->chip_erase_cached(pgm, p);
+
+  if(rc == LIBAVRDUDE_SOFTFAIL) {
+    pmsg_info("(erase) emulating chip erase by writing 0xff to flash ");
+    AVRMEM *flm = avr_locate_mem(p, "flash");
+    if(!flm) {
+      msg_error("but flash not defined for part %s?\n", p->desc);
+      return -1;
+    }
+    int addr, beg = 0, end = flm->size-1;
+    if(pgm->readonly) {
+      for(addr=beg; addr < flm->size; addr++)
+        if(!pgm->readonly(pgm, p, flm, addr)) {
+          beg = addr;
+          break;
+        }
+      if(addr >= flm->size) {
+        msg_info("but all flash is write protected\n");
+        return 0;
+      }
+      for(addr=end; addr >= 0; addr--)
+        if(!pgm->readonly(pgm, p, flm, addr)) {
+          end = addr;
+          break;
+        }
+    }
+
+    msg_info("[0x%04x, 0x%04x]; undo with abort\n", beg, end);
+    for(int addr=beg; addr <= end; addr++)
+      if(!pgm->readonly || !pgm->readonly(pgm, p, flm, addr))
+        if(pgm->write_byte_cached(pgm, p, flm, addr, 0xff) == -1)
+          return -1;
+    return 0;
+  }
+
+  if(rc) {
+    pmsg_error("(erase) programmer %s failed erasing the chip\n", (char *) ldata(lfirst(pgm->id)));
+    return -1;
+  }
 
   return 0;
 }
@@ -1290,6 +1339,15 @@ void term_gotline(char *cmdstr) {
         term_running = 0;
     }
     free(cmdstr);
+    /*
+     * This is a workaround for a bug apparently present in the
+     * readline compat layer of libedit which is natively present in
+     * NetBSD and MacOS.
+     *
+     * see https://github.com/avrdudes/avrdude/issues/1173
+     */
+    rl_callback_handler_remove();
+    rl_callback_handler_install("avrdude> ", term_gotline);
   } else {
     // call quit at end of file or terminal ^D
     term_out("\n");

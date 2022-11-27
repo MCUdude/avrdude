@@ -119,12 +119,12 @@ PROGRAMMER *pgm_new(void) {
   pgm->err_led        = pgm_default_led;
   pgm->pgm_led        = pgm_default_led;
   pgm->vfy_led        = pgm_default_led;
-  pgm->read_byte_cached = avr_read_byte_cached;
+  pgm->read_byte_cached  = avr_read_byte_cached;
   pgm->write_byte_cached = avr_write_byte_cached;
   pgm->chip_erase_cached = avr_chip_erase_cached;
   pgm->page_erase_cached = avr_page_erase_cached;
   pgm->flush_cache    = avr_flush_cache;
-  pgm->reset_cache = avr_reset_cache;
+  pgm->reset_cache    = avr_reset_cache;
 
   /*
    * optional functions - these are checked to make sure they are
@@ -154,6 +154,8 @@ PROGRAMMER *pgm_new(void) {
   pgm->parseextparams = NULL;
   pgm->setup          = NULL;
   pgm->teardown       = NULL;
+  pgm->readonly       = NULL;
+  pgm->flash_readhook = NULL;
 
   // For allocating "global" memory by the programmer
   pgm->cookie          = NULL;
@@ -268,10 +270,10 @@ void pgm_display_generic_mask(const PROGRAMMER *pgm, const char *p, unsigned int
     msg_info("%s  RESET   = %s\n", p, pins_to_str(&pgm->pin[PIN_AVR_RESET]));
   if(show & (1<<PIN_AVR_SCK))
     msg_info("%s  SCK     = %s\n", p, pins_to_str(&pgm->pin[PIN_AVR_SCK]));
-  if(show & (1<<PIN_AVR_MOSI))
-    msg_info("%s  MOSI    = %s\n", p, pins_to_str(&pgm->pin[PIN_AVR_MOSI]));
-  if(show & (1<<PIN_AVR_MISO))
-    msg_info("%s  MISO    = %s\n", p, pins_to_str(&pgm->pin[PIN_AVR_MISO]));
+  if(show & (1<<PIN_AVR_SDO))
+    msg_info("%s  SDO     = %s\n", p, pins_to_str(&pgm->pin[PIN_AVR_SDO]));
+  if(show & (1<<PIN_AVR_SDI))
+    msg_info("%s  SDI     = %s\n", p, pins_to_str(&pgm->pin[PIN_AVR_SDI]));
   if(show & (1<<PIN_LED_ERR))
     msg_info("%s  ERR LED = %s\n", p, pins_to_str(&pgm->pin[PIN_LED_ERR]));
   if(show & (1<<PIN_LED_RDY))

@@ -603,7 +603,6 @@ static int stk500v2_recv(const PROGRAMMER *pgm, unsigned char *msg, size_t maxsi
    * https://savannah.nongnu.org/bugs/index.php?43626
    */
   long timeoutval = SERIAL_TIMEOUT;		// seconds
-  struct timeval tv;
   double tstart, tnow;
 
   if (PDATA(pgm)->pgmtype == PGMTYPE_AVRISP_MKII ||
@@ -616,8 +615,7 @@ static int stk500v2_recv(const PROGRAMMER *pgm, unsigned char *msg, size_t maxsi
 
   DEBUG("STK500V2: stk500v2_recv(): ");
 
-  gettimeofday(&tv, NULL);
-  tstart = tv.tv_sec;
+  tstart = avr_timestamp();
 
   while ( (state != sDONE ) && (!timeout) ) {
     if (serial_recv(&pgm->fd, &c, 1) < 0)
@@ -690,9 +688,8 @@ static int stk500v2_recv(const PROGRAMMER *pgm, unsigned char *msg, size_t maxsi
         return -5;
      } /* switch */
 
-     gettimeofday(&tv, NULL);
-     tnow = tv.tv_sec;
-     if (tnow-tstart > timeoutval) {			// wuff - signed/unsigned/overflow
+     tnow = avr_timestamp();
+     if (tnow-tstart > timeoutval) {
       timedout:
        pmsg_error("timeout\n");
        return -1;
@@ -956,8 +953,10 @@ static int stk500v2_chip_erase(const PROGRAMMER *pgm, const AVRPART *p) {
   memset(buf+3, 0, 4);
   avr_set_bits(p->op[AVR_OP_CHIP_ERASE], buf+3);
   result = stk500v2_command(pgm, buf, 7, sizeof(buf));
-  usleep(p->chip_erase_delay);
-  pgm->initialize(pgm, p);
+  usleep(p->chip_erase_delay); // should not be needed
+  if (PDATA(pgm)->pgmtype != PGMTYPE_JTAGICE_MKII) { // skip for JTAGICE mkII (FW v7.39)
+    pgm->initialize(pgm, p); // should not be needed
+  }
 
   pgm->pgm_led(pgm, OFF);
 
@@ -1011,7 +1010,7 @@ static struct
   const char *description;
 } connection_status[] =
 {
-  { STATUS_CONN_FAIL_MOSI, "MOSI fail" },
+  { STATUS_CONN_FAIL_SDO, "SDO fail" },
   { STATUS_CONN_FAIL_RST, "RST fail" },
   { STATUS_CONN_FAIL_SCK, "SCK fail" },
   { STATUS_TGT_NOT_DETECTED, "Target not detected" },
@@ -3044,14 +3043,14 @@ static void stk500v2_display(const PROGRAMMER *pgm, const char *p) {
     stk500v2_getparm(pgm, PARAM_SW_MAJOR, &maj);
     stk500v2_getparm(pgm, PARAM_SW_MINOR, &min);
     msg_info("%sHardware Version: %d\n", p, hdw);
-    msg_info("%sFirmware Version Master : %d.%02d\n", p, maj, min);
+    msg_info("%sFirmware Version Controller : %d.%02d\n", p, maj, min);
     if (PDATA(pgm)->pgmtype == PGMTYPE_STK600) {
-      stk500v2_getparm(pgm, PARAM_SW_MAJOR_SLAVE1, &maj_s1);
-      stk500v2_getparm(pgm, PARAM_SW_MINOR_SLAVE1, &min_s1);
-      stk500v2_getparm(pgm, PARAM_SW_MAJOR_SLAVE2, &maj_s2);
-      stk500v2_getparm(pgm, PARAM_SW_MINOR_SLAVE2, &min_s2);
-      msg_info("%sFirmware Version Slave 1: %d.%02d\n", p, maj_s1, min_s1);
-      msg_info("%sFirmware Version Slave 2: %d.%02d\n", p, maj_s2, min_s2);
+      stk500v2_getparm(pgm, PARAM_SW_MAJOR_PERIPHERY1, &maj_s1);
+      stk500v2_getparm(pgm, PARAM_SW_MINOR_PERIPHERY1, &min_s1);
+      stk500v2_getparm(pgm, PARAM_SW_MAJOR_PERIPHERY2, &maj_s2);
+      stk500v2_getparm(pgm, PARAM_SW_MINOR_PERIPHERY2, &min_s2);
+      msg_info("%sFirmware Version Periphery 1: %d.%02d\n", p, maj_s1, min_s1);
+      msg_info("%sFirmware Version Periphery 2: %d.%02d\n", p, maj_s2, min_s2);
     }
   }
 
