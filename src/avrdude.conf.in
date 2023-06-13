@@ -2197,7 +2197,7 @@ programmer
     prog_modes             = PM_JTAG | PM_XMEGAJTAG | PM_AVR32JTAG;
     extra_features         = HAS_VTARG_READ;
     connection_type        = usb;
-    usbpid                 = 0x2110, 0x2140;
+    usbpid                 = 0x2140, 0x2110;
 ;
 
 #------------------------------------------------------------
@@ -2211,7 +2211,7 @@ programmer
     prog_modes             = PM_PDI;
     extra_features         = HAS_VTARG_READ;
     connection_type        = usb;
-    usbpid                 = 0x2110, 0x2140;
+    usbpid                 = 0x2140, 0x2110;
 ;
 
 #------------------------------------------------------------
@@ -2225,7 +2225,7 @@ programmer
     prog_modes             = PM_UPDI;
     extra_features         = HAS_VTARG_READ;
     connection_type        = usb;
-    usbpid                 = 0x2110, 0x2140;
+    usbpid                 = 0x2140, 0x2110;
     hvupdi_support         = 1;
 ;
 
@@ -2240,7 +2240,7 @@ programmer
     prog_modes             = PM_debugWIRE;
     extra_features         = HAS_VTARG_READ;
     connection_type        = usb;
-    usbpid                 = 0x2110, 0x2140;
+    usbpid                 = 0x2140, 0x2110;
 ;
 
 #------------------------------------------------------------
@@ -2254,7 +2254,7 @@ programmer
     prog_modes             = PM_ISP;
     extra_features         = HAS_VTARG_READ;
     connection_type        = usb;
-    usbpid                 = 0x2110, 0x2140;
+    usbpid                 = 0x2140, 0x2110;
 ;
 
 #------------------------------------------------------------
