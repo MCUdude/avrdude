@@ -2262,7 +2262,7 @@ programmer
 #------------------------------------------------------------
 
 programmer
-    id                     = "xplainedpro";
+    id                     = "xplainedpro", "xplainedpro_jtag";
     desc                   = "Atmel AVR XplainedPro in JTAG mode";
     type                   = "jtagice3";
     prog_modes             = PM_JTAG | PM_XMEGAJTAG | PM_AVR32JTAG;
