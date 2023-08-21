@@ -286,6 +286,7 @@ target_link_libraries(libavrdude
     ${LIB_LIBFTDI}
     ${LIB_LIBFTDI1}
     ${LIB_LIBREADLINE}
+    ${LIB_LIBSERIALPORT}
     ${LIB_NCURSES}
     ${LIB_LIBGPIOD}
     ${EXTRA_WINDOWS_LIBRARIES}
