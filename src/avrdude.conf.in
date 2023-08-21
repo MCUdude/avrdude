@@ -2897,6 +2897,36 @@ programmer
 ;
 
 #
+# SERIAL PORT DEFINITIONS
+#
+
+#------------------------------------------------------------
+# ch340
+#------------------------------------------------------------
+
+serialadapter
+    id                     = "ch340";
+    desc                   = "WCH CH340 USB to serial adapter";
+    usbvid                 = 0x1a86;
+    usbpid                 = 0x7523;
+    ;usbsn                 = "1234567890"; # Serial number, Optional
+    ;default_baud          = 250000; # Optional
+;
+
+#------------------------------------------------------------
+# ft232r
+#------------------------------------------------------------
+
+serialadapter
+    id                     = "ft232r";
+    desc                   = "FTDI FT232Rx USB to serial adapter";
+    usbvid                 = 0x0403;
+    usbpid                 = 0x6001;
+    ;usbsn                 = "1234567890"; # Serial number, Optional
+    ;default_baud          = 250000; # Optional
+;
+
+#
 # PART DEFINITIONS
 #
 
