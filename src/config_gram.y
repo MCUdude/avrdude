@@ -77,6 +77,7 @@ static int pin_name;
 %token K_BUFF
 %token K_CONNTYPE
 %token K_DEDICATED
+%token K_DEFAULT_BAUD
 %token K_DEFAULT_BITCLOCK
 %token K_DEFAULT_PARALLEL
 %token K_DEFAULT_PROGRAMMER
@@ -105,6 +106,7 @@ static int pin_name;
 %token K_RESET
 %token K_RETRY_PULSE
 %token K_SERIAL
+%token K_SERIALADAPTER
 %token K_SPI
 %token K_SCK
 %token K_SIGNATURE
@@ -115,6 +117,7 @@ static int pin_name;
 %token K_TMS
 %token K_USB
 %token K_USBPID
+%token K_USBVID
 %token K_TYPE
 %token K_VARIANTS
 %token K_VCC
@@ -211,6 +214,8 @@ config :
 def :
   prog_def TKN_SEMI |
 
+  serialadapter_def TKN_SEMI |
+
   part_def TKN_SEMI |
 
   K_DEFAULT_PROGRAMMER TKN_EQUAL TKN_STRING TKN_SEMI {
@@ -305,6 +310,43 @@ prog_decl :
       current_prog->config_file = cache_string(cfg_infile);
       current_prog->lineno = cfg_lineno;
       free_token($3);
+    }
+;
+
+
+serialadapter_def :
+  serialadapter_decl serialadapter_parms
+    {
+      SERIALADAPTER * existing_adap;
+      if (lsize(current_serialadapter->id) == 0) {
+        yyerror("required parameter id not specified");
+        YYABORT;
+      }
+      for(LNODEID ln = lfirst(current_serialadapter->id); ln; ln = lnext(ln)) {
+        char *id = ldata(ln);
+        if((existing_adap = locate_serialadapter(serialadapters, id))) {
+          // Temporarily set lineno to lineno of serialadapter start
+          int temp = cfg_lineno; cfg_lineno = current_serialadapter->lineno;
+          yywarning("serial adapter %s overwrites previous definition %s:%d.",
+            id, existing_adap->config_file, existing_adap->lineno);
+          cfg_lineno = temp;
+          lrmv_d(serialadapters, existing_adap);
+          pgm_free(existing_adap);
+        }
+      }
+      current_serialadapter->comments = cfg_move_comments();
+      LISTADD(serialadapters, current_serialadapter);
+      current_serialadapter = NULL;
+      current_strct = COMP_CONFIG_MAIN;
+    }
+;
+
+
+serialadapter_decl :
+  K_PROGRAMMER
+    { current_serialadapter = serialadapter_new();
+      current_serialadapter->config_file = cache_string(cfg_infile);
+      current_serialadapter->lineno = cfg_lineno;
     }
 ;
 
@@ -1064,6 +1106,53 @@ part_parm :
   }
 ;
 
+serialadapter_parms :
+  serialadapter_parm TKN_SEMI |
+  serialadapter_parms serialadapter_parm TKN_SEMI
+;
+
+serialadapter_parm :
+  K_ID TKN_EQUAL string_list {
+    {
+      while (lsize(string_list)) {
+        TOKEN *t = lrmv_n(string_list, 1);
+        ladd(current_serialadapter->id, cfg_strdup("config_gram.y", t->value.string));
+        free_token(t);
+      }
+    }
+  } |
+  K_USBPID TKN_EQUAL numexpr {
+    {
+      current_serialadapter->usbpid = $3->value.number;
+      free_token($3);
+    }
+  }
+  |
+  K_USBVID TKN_EQUAL numexpr {
+    {
+      current_serialadapter->usbvid = $3->value.number;
+      free_token($3);
+    }
+  }
+
+  |
+  /* needs to be handled through TKN_COMPONENT */
+  /* K_DESC TKN_EQUAL TKN_STRING
+  | */
+  K_DEFAULT_BAUD TKN_EQUAL numexpr {
+    {
+      current_serialadapter->default_baud = $3->value.number;
+      free_token($3);
+    }
+  }
+  |
+  K_SERIAL TKN_EQUAL TKN_STRING {
+    {
+      current_serialadapter->defaultbaud = cache_string($3->value.string);
+      free_token($3);
+    }
+  }
+;
 
 mem_specs :
   mem_spec TKN_SEMI |
