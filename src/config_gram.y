@@ -343,7 +343,7 @@ serialadapter_def :
 
 
 serialadapter_decl :
-  K_PROGRAMMER
+  K_SERIALADAPTER
     { current_serialadapter = serialadapter_new();
       current_serialadapter->config_file = cache_string(cfg_infile);
       current_serialadapter->lineno = cfg_lineno;
