@@ -165,10 +165,11 @@ static int dryrun_initialize(const PROGRAMMER *pgm, const AVRPART *p) {
 
   if(!pm)
     Return("programmer %s and part %s have no common programming mode", pgmid, p->desc);
-   if(pm & (pm-1))
-      Return("%s and %s share multiple programming modes (%s)",
-        pgmid, p->desc, avr_prog_modes(pm));
-*/
+  if(pm & (pm-1))
+    Return("%s and %s share multiple programming modes (%s)",
+      pgmid, p->desc, avr_prog_modes(pm));
+ *
+ */
 
   return pgm->program_enable(pgm, p);
 }
@@ -212,7 +213,7 @@ static int dryrun_paged_write(const PROGRAMMER *pgm, const AVRPART *p, const AVR
     Return("no dryrun device? Raise an issue at https://github.com/avrdudes/avrdude/issues");
 
   if(n_bytes) {
-    AVRMEM *dmem;
+    AVRMEM *dmem, *dm2;
     int mchr, chunk;
     unsigned int end;
 
@@ -237,6 +238,24 @@ static int dryrun_paged_write(const PROGRAMMER *pgm, const AVRPART *p, const AVR
     for(; addr < end; addr += chunk) {
       chunk = end-addr < page_size? end-addr: page_size;
       (mchr == 'F'? memand: memcpy)(dmem->buf+addr, m->buf+addr, chunk);
+
+      // Copy chunk to overlapping XMEGA's apptable, application, boot and flash memories
+      if(mchr == 'F') {
+        if(str_eq(dmem->desc, "flash")) {
+          for(LNODEID ln=lfirst(dry.dp->mem); ln; ln=lnext(ln)) {
+            dm2 = ldata(ln);
+            if(avr_mem_is_flash_type(dm2) && !str_eq(dm2->desc, "flash")) { // Overlapping region?
+              unsigned int cpaddr = addr + dmem->offset - dm2->offset;
+              if(cpaddr < (unsigned int) dm2->size && cpaddr + chunk <= (unsigned int) dm2->size)
+                memcpy(dm2->buf+cpaddr, dmem->buf+addr, chunk);
+            }
+          }
+        } else if((dm2 = avr_locate_mem(dry.dp, "flash"))) {
+          unsigned int cpaddr = addr + dmem->offset - dm2->offset;
+          if(cpaddr < (unsigned int) dm2->size && cpaddr + chunk <= (unsigned int) dm2->size)
+            memcpy(dm2->buf+cpaddr, dmem->buf+addr, chunk);
+        }
+      }
     }
   }
 
