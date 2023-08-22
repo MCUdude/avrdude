@@ -851,6 +851,18 @@ typedef struct programmer_t {
   char flag;                    // For use by pgm->initpgm()
 } PROGRAMMER;
 
+typedef struct serialadapter_t {
+  LISTID id;
+  const char *desc;
+  int default_baudrate;
+  int usbvid;
+  LISTID usbpid;
+  const char *usbsn;
+  const char *port_path;
+  LISTID comments;              // Used by developer options -c*/[ASsr...]
+  int  lineno;                  // Config file line number
+} SERIALADAPTER;
+
 #define NO_PIN   (PIN_MAX + 1U) // Magic pinno[] value for unused pins
 
 #ifdef __cplusplus
@@ -882,6 +894,16 @@ typedef void (*walk_programmers_cb)(const char *name, const char *desc,
 void walk_programmers(LISTID programmers, walk_programmers_cb cb, void *cookie);
 
 void sort_programmers(LISTID programmers);
+
+SERIALADAPTER *serialadapter_new(void);
+SERIALADAPTER *serialadapter_dup(const SERIALADAPTER *src);
+void           serialadapter_free(SERIALADAPTER *ser);
+
+void serialadapter_display(SERIALADAPTER *ser, const char *p);
+
+SERIALADAPTER *locate_serialadapter_set(const LISTID serialadapters, const char *id, const char **setid);
+
+SERIALADAPTER *locate_serialadapter(const LISTID serialadapters, const char *configid);
 
 #ifdef __cplusplus
 }
