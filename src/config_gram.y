@@ -331,7 +331,7 @@ serialadapter_def :
             id, existing_adap->config_file, existing_adap->lineno);
           cfg_lineno = temp;
           lrmv_d(serialadapters, existing_adap);
-          pgm_free(existing_adap);
+          serialadapter_free(existing_adap);
         }
       }
       current_serialadapter->comments = cfg_move_comments();
