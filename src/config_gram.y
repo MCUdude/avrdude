@@ -1145,13 +1145,6 @@ serialadapter_parm :
       free_token($3);
     }
   }
-  |
-  K_SERIAL TKN_EQUAL TKN_STRING {
-    {
-      current_serialadapter->defaultbaud = cache_string($3->value.string);
-      free_token($3);
-    }
-  }
 ;
 
 mem_specs :
