@@ -860,6 +860,7 @@ typedef struct serialadapter_t {
   const char *usbsn;
   const char *port_path;
   LISTID comments;              // Used by developer options -c*/[ASsr...]
+  const char *config_file;      // Config file where defined
   int  lineno;                  // Config file line number
 } SERIALADAPTER;
 
