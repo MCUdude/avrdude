@@ -102,6 +102,7 @@ extern int          cfg_lineno;
 extern char       * cfg_infile;
 extern LISTID       string_list;
 extern LISTID       number_list;
+extern LISTID       serialadapters;
 
 extern bool         is_alias; // current entry is alias
 
