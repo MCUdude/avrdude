@@ -1141,7 +1141,7 @@ serialadapter_parm :
   | */
   K_DEFAULT_BAUD TKN_EQUAL numexpr {
     {
-      current_serialadapter->default_baud = $3->value.number;
+      current_serialadapter->default_baudrate = $3->value.number;
       free_token($3);
     }
   }
