@@ -95,6 +95,17 @@ SERIALADAPTER *locate_programmer(const LISTID serialadapters, const char *config
   return locate_serialadapter_set(serialadapters, configid, NULL);
 }
 
+static int sort_serialadapter_compare(const SERIALADAPTER *s1, const SERIALADAPTER *s2) {
+  if(s1 == NULL || s1->id == NULL || s2 == NULL || s2->id == NULL)
+    return 0;
+
+  return strcasecmp(ldata(lfirst(s1->id)), ldata(lfirst(s2->id)));
+}
+
+void sort_serialadapters(LISTID serialadapters) {
+  lsort(serialadapters,(int (*)(void*, void*)) sort_serialadapter_compare);
+}
+
 #else
 
 #endif

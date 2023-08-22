@@ -905,6 +905,8 @@ SERIALADAPTER *locate_serialadapter_set(const LISTID serialadapters, const char 
 
 SERIALADAPTER *locate_serialadapter(const LISTID serialadapters, const char *configid);
 
+void sort_serialadapters(LISTID serialadapters);
+
 #ifdef __cplusplus
 }
 #endif
