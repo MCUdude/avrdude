@@ -47,11 +47,13 @@ int allow_subshells;
 LISTID       string_list;
 LISTID       number_list;
 PROGRAMMER * current_prog;
+SERIALADAPTER * current_serialadapter;
 AVRPART    * current_part;
 AVRMEM     * current_mem;
 int          current_strct;
 LISTID       part_list;
 LISTID       programmers;
+LISTID       serialadapters;
 bool         is_alias;
 
 int    cfg_lineno;

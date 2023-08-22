@@ -450,6 +450,20 @@ static void programmer_not_found(const char *programmer) {
   msg_error("\n");
 }
 
+static void serialadapter_not_found(const char *serialadapter) {
+  msg_error("\n");
+  if(serialadapter && *serialadapter)
+    pmsg_error("cannot find serial adapter id %s\n", serialadapter);
+  else {
+    pmsg_error("no serial adapter has been specified on the command line or in the\n");
+    imsg_error("config file(s); specify one using the -P option and try again\n");
+  }
+
+  msg_error("\nValid serial adapters are:\n");
+  //list_serialadapters(stderr, "  ", serialadapters, ~0);
+  msg_error("\n");
+}
+
 static void part_not_found(const char *partdesc) {
   msg_error("\n");
   if(partdesc && *partdesc)
