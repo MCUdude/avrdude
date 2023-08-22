@@ -2909,8 +2909,7 @@ serialadapter
     desc                   = "WCH CH340 USB to serial adapter";
     usbvid                 = 0x1a86;
     usbpid                 = 0x7523;
-    ;usbsn                 = "1234567890"; # Serial number, Optional
-    ;default_baud          = 250000; # Optional
+    #default_baud          = 250000; # Optional
 ;
 
 #------------------------------------------------------------
@@ -2922,8 +2921,7 @@ serialadapter
     desc                   = "FTDI FT232Rx USB to serial adapter";
     usbvid                 = 0x0403;
     usbpid                 = 0x6001;
-    ;usbsn                 = "1234567890"; # Serial number, Optional
-    ;default_baud          = 250000; # Optional
+    #default_baud          = 250000; # Optional
 ;
 
 #
