@@ -40,6 +40,7 @@ typedef struct {
 enum {                          // Which structures a component can occur in
   COMP_CONFIG_MAIN,
   COMP_PROGRAMMER,
+  COMP_SERIALADAPTER,
   COMP_AVRPART,
   COMP_AVRMEM,
 };
@@ -93,6 +94,7 @@ typedef struct token_t *token_p;
 
 extern FILE       * yyin;
 extern PROGRAMMER * current_prog;
+extern SERIALADAPTER * current_serialadapter;
 extern AVRPART    * current_part;
 extern AVRMEM     * current_mem;
 extern int          current_strct;
@@ -100,6 +102,7 @@ extern int          cfg_lineno;
 extern char       * cfg_infile;
 extern LISTID       string_list;
 extern LISTID       number_list;
+
 extern bool         is_alias; // current entry is alias
 
 

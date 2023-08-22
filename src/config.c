@@ -62,6 +62,7 @@ char * cfg_infile;
 extern char * yytext;
 
 #define pgm_comp_desc(x, type)  { #x, COMP_PROGRAMMER, offsetof(PROGRAMMER, x), sizeof(((PROGRAMMER *) NULL)->x), type }
+#define ser_comp_desc(x, type)  { #x, COMP_SERIALADAPTER, offsetof(SERIALADAPTER, x), sizeof(((SERIALADAPTER *) NULL)->x), type }
 #define part_comp_desc(x, type) { #x, COMP_AVRPART, offsetof(AVRPART, x), sizeof(((AVRPART *) NULL)->x), type }
 #define mem_comp_desc(x, type)  { #x, COMP_AVRMEM, offsetof(AVRMEM, x), sizeof(((AVRMEM *) NULL)->x), type }
 
@@ -77,6 +78,13 @@ Component_t avr_comp[] = {
   pgm_comp_desc(usbsn, COMP_STRING),
   pgm_comp_desc(usbvendor, COMP_STRING),
   pgm_comp_desc(usbproduct, COMP_STRING),
+
+  // SERIALADAPTER
+  ser_comp_desc(desc, COMP_STRING),
+  ser_comp_desc(default_baudrate, COMP_INT),
+  ser_comp_desc(usbvid, COMP_INT),
+  ser_comp_desc(usbsn, COMP_STRING),
+  ser_comp_desc(port_path, COMP_STRING),
 
   // AVRPART
   part_comp_desc(desc, COMP_STRING),
