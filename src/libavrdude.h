@@ -856,7 +856,7 @@ typedef struct serialadapter_t {
   const char *desc;
   int default_baudrate;
   int usbvid;
-  LISTID usbpid;
+  int usbpid;
   const char *usbsn;
   const char *port_path;
   LISTID comments;              // Used by developer options -c*/[ASsr...]

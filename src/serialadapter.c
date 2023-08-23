@@ -31,7 +31,7 @@ SERIALADAPTER *serialadapter_new(void) {
 
   // Initialise const char * and LISTID entities
   ser->id = lcreat(NULL, 0);
-  ser->usbpid = lcreat(NULL, 0);
+  //ser->usbpid = lcreat(NULL, 0);
   ser->desc = nulp;
   ser->port_path = nulp;
   return ser;
@@ -42,21 +42,21 @@ SERIALADAPTER *serialadapter_dup(const SERIALADAPTER *src) {
 
   if (src) {
     ldestroy_cb(ser->id, free);
-    ldestroy_cb(ser->usbpid, free);
+    //ldestroy_cb(ser->usbpid, free);
 
     memcpy(ser, src, sizeof(*ser));
 
     ser->id = lcreat(NULL, 0);
-    ser->usbpid = lcreat(NULL, 0);
+    //ser->usbpid = lcreat(NULL, 0);
 
     // Leave id list empty but copy usbpid over
-    if (src->usbpid) {
+    /*if (src->usbpid) {
       for (LNODEID ln = lfirst(src->usbpid); ln; ln = lnext(ln)) {
         int *ip = cfg_malloc("serialadapter_dup_dup()", sizeof(int));
         *ip = *(int *) ldata(ln);
         ladd(ser->usbpid, ip);
       }
-    }
+    }*/
   }
   return ser;
 }
@@ -67,10 +67,10 @@ void serialadapter_free(SERIALADAPTER *s) {
       ldestroy_cb(s->id, free);
       s->id = NULL;
     }
-    if (s->usbpid) {
+    /*if (s->usbpid) {
       ldestroy_cb(s->usbpid, free);
       s->usbpid = NULL;
-    }
+    }*/
     // Never free const char *, eg, s->desc, which are set by cache_string()
     free(s);
   }
