@@ -214,6 +214,7 @@ add_library(libavrdude
     ser_avrdoper.c
     ser_posix.c
     ser_win32.c
+    serialadapter.c
     serialupdi.c
     serialupdi.h
     solaris_ecpp.h
