@@ -207,6 +207,8 @@ static LISTID additional_config_files = NULL;
 
 static PROGRAMMER * pgm;
 
+static SERIALADAPTER *ser;
+
 /*
  * global options
  */
@@ -618,6 +620,7 @@ int main(int argc, char * argv [])
   exitspecs     = NULL;
   pgm           = NULL;
   pgmid         = "";
+
   explicit_c    = 0;
   explicit_e    = 0;
   verbose       = 0;
@@ -1085,6 +1088,10 @@ int main(int argc, char * argv [])
   }
 
   msg_notice("\n");
+
+  const char* prt = port;
+  ser = locate_serialadapter_set(serialadapters, prt, &prt);
+  msg_info("port desc: %s, vid: 0x%04x, pid: 0x%04x\n", ser->desc, ser->usbvid, ser->usbpid);
 
   if(!pgmid || !*pgmid) {
     programmer_not_found(NULL);
