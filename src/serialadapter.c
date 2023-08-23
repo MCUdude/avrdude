@@ -91,7 +91,7 @@ SERIALADAPTER *locate_serialadapter_set(const LISTID serialadapters, const char 
   return NULL;
 }
 
-SERIALADAPTER *locate_programmer(const LISTID serialadapters, const char *configid) {
+SERIALADAPTER *locate_serialadapter(const LISTID serialadapters, const char *configid) {
   return locate_serialadapter_set(serialadapters, configid, NULL);
 }
 
