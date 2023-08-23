@@ -83,6 +83,7 @@ Component_t avr_comp[] = {
   ser_comp_desc(desc, COMP_STRING),
   ser_comp_desc(default_baudrate, COMP_INT),
   ser_comp_desc(usbvid, COMP_INT),
+  ser_comp_desc(usbpid, COMP_INT),
   ser_comp_desc(usbsn, COMP_STRING),
   ser_comp_desc(port_path, COMP_STRING),
 
