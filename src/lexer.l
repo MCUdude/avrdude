@@ -236,7 +236,7 @@ retry_pulse      { yylval=NULL; ccap(); return K_RETRY_PULSE; }
 sck              { yylval=new_token(K_SCK); ccap(); return K_SCK; }
 sdi              { yylval=NULL; ccap(); return K_SDI; }
 sdo              { yylval=NULL; ccap(); return K_SDO; }
-serialadapter    { yylval=NULL; ccap(); return K_SERIALADAPTER; }
+serialadapter    { yylval=NULL; ccap(); current_strct = COMP_SERIALADAPTER; return K_SERIALADAPTER; }
 serial           { yylval=NULL; ccap(); return K_SERIAL; }
 signature        { yylval=NULL; ccap(); return K_SIGNATURE; }
 spi              { yylval=NULL; return K_SPI; }

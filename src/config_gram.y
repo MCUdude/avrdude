@@ -317,7 +317,7 @@ prog_decl :
 serialadapter_def :
   serialadapter_decl serialadapter_parms
     {
-      SERIALADAPTER * existing_adap;
+      SERIALADAPTER *existing_adap;
       if (lsize(current_serialadapter->id) == 0) {
         yyerror("required parameter id not specified");
         YYABORT;
@@ -1112,6 +1112,10 @@ serialadapter_parms :
 ;
 
 serialadapter_parm :
+  TKN_COMPONENT TKN_EQUAL expr {
+    cfg_assign((char *) current_serialadapter, COMP_SERIALADAPTER, $1->value.comp, &$3->value);
+    free_token($1);
+  } |
   K_ID TKN_EQUAL string_list {
     {
       while (lsize(string_list)) {
@@ -1126,19 +1130,7 @@ serialadapter_parm :
       current_serialadapter->usbpid = $3->value.number;
       free_token($3);
     }
-  }
-  |
-  K_USBVID TKN_EQUAL numexpr {
-    {
-      current_serialadapter->usbvid = $3->value.number;
-      free_token($3);
-    }
-  }
-
-  |
-  /* needs to be handled through TKN_COMPONENT */
-  /* K_DESC TKN_EQUAL TKN_STRING
-  | */
+  } |
   K_DEFAULT_BAUD TKN_EQUAL numexpr {
     {
       current_serialadapter->default_baudrate = $3->value.number;

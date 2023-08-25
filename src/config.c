@@ -81,9 +81,7 @@ Component_t avr_comp[] = {
 
   // SERIALADAPTER
   ser_comp_desc(desc, COMP_STRING),
-  ser_comp_desc(default_baudrate, COMP_INT),
   ser_comp_desc(usbvid, COMP_INT),
-  ser_comp_desc(usbpid, COMP_INT),
   ser_comp_desc(usbsn, COMP_STRING),
   ser_comp_desc(port_path, COMP_STRING),
 
@@ -171,6 +169,7 @@ void cleanup_config(void)
 {
   ldestroy_cb(part_list, (void(*)(void*))avr_free_part);
   ldestroy_cb(programmers, (void(*)(void*))pgm_free);
+  ldestroy_cb(serialadapters, (void(*)(void*))serialadapter_free);
   ldestroy_cb(string_list, (void(*)(void*))free_token);
   ldestroy_cb(number_list, (void(*)(void*))free_token);
 }
@@ -184,6 +183,7 @@ int init_config(void)
   current_mem  = NULL;
   part_list    = lcreat(NULL, 0);
   programmers  = lcreat(NULL, 0);
+  serialadapters = lcreat(NULL, 0);
   is_alias     = false;
 
   cfg_lineno   = 1;
@@ -866,6 +866,7 @@ const char *cfg_strct_name(int strct) {
   case COMP_AVRPART: return "AVRPART";
   case COMP_AVRMEM: return "AVRMEM";
   case COMP_PROGRAMMER: return "PROGRAMMER";
+  case COMP_SERIALADAPTER: return "SERIALADAPTER";
   }
   return "unknown struct";
 }
