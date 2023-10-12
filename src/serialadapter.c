@@ -330,8 +330,8 @@ int touch_serialport(char **portp, int baudrate, int nwaits) {
   nwaits += 2;
 #endif
   pmsg_info("waiting for new port...");
-  usleep(400*1000*nwaits);
-  for(i = nloops; i > 0; i--) {
+  //usleep(400*1000*nwaits);
+  for(i = 10; i > 0; i--) {
     usleep(nap*1000);
     if((sp2 = get_libserialport_data(&n2))) {
       diff = sa_spa_not_spb(sp2, n2, sp1, n1);
