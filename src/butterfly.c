@@ -56,6 +56,7 @@ struct pdata
 {
   char has_auto_incr_addr;
   unsigned int buffersize;
+  bool no_autoreset;
 };
 
 #define PDATA(pgm) ((struct pdata *)(pgm->cookie))
@@ -364,10 +365,25 @@ static int butterfly_open(PROGRAMMER *pgm, const char *port) {
     return -1;
   }
 
+  if(!PDATA(pgm)->no_autoreset) {
+    // This code assumes a negative-logic USB to TTL serial adapter
+    // Set RTS/DTR high to discharge the series-capacitor, if present
+    imsg_notice2("Toggling the DTR/RTS lines to trigger a hardware reset\n");
+    serial_set_dtr_rts(&pgm->fd, 0);
+    usleep(250 * 1000);
+    // Pull the RTS/DTR line low to reset AVR
+    serial_set_dtr_rts(&pgm->fd, 1);
+    // Max 100 us: charging a cap longer creates a high reset spike above Vcc
+    usleep(100);
+    // Set the RTS/DTR line back to high, so direct connection to reset works
+    serial_set_dtr_rts(&pgm->fd, 0);
+    usleep(100 * 1000);
+  }
+
   /*
    * drain any extraneous input
    */
-  butterfly_drain (pgm, 0);
+  butterfly_drain(pgm, 0);
 
   return 0;
 }
@@ -687,6 +703,37 @@ static int butterfly_read_sig_bytes(const PROGRAMMER *pgm, const AVRPART *p, con
   return 3;
 }
 
+static int butterfly_parseextparms(const PROGRAMMER *pgm, const LISTID extparms) {
+  const char *extended_param;
+  int rv = 0;
+
+  for (LNODEID ln = lfirst(extparms); ln; ln = lnext(ln)) {
+    extended_param = ldata(ln);
+
+    if(str_starts(extended_param, "no_autoreset")) {
+      if(!str_eq(extended_param, "no_autoreset")) {
+        pmsg_error("invalid -xno_autoreset value %s. Use -xno_autoreset\n", extended_param);
+        rv = -1;
+        break;
+      }
+      PDATA(pgm)->no_autoreset = true;
+      continue;
+    }
+
+    if (str_eq(extended_param, "help")) {
+      msg_error("%s -c %s extended options:\n", progname, pgmid);
+      msg_error("  -xno_autoreset Don't toggle RTS/DTR lines on port open to prevent a HW reset\n");
+      msg_error("  -xhelp         Show this help menu and exit\n");
+      exit(0);
+    }
+
+    pmsg_error("invalid extended parameter '%s'\n", extended_param);
+    rv = -1;
+  }
+
+  return rv;
+}
+
 const char butterfly_desc[] = "Atmel Butterfly evaluation board; Atmel AppNotes AVR109, AVR911";
 
 void butterfly_initpgm(PROGRAMMER *pgm) {
@@ -720,7 +767,7 @@ void butterfly_initpgm(PROGRAMMER *pgm) {
   pgm->paged_load = butterfly_paged_load;
 
   pgm->read_sig_bytes = butterfly_read_sig_bytes;
-
+  pgm->parseextparams = butterfly_parseextparms;
   pgm->setup          = butterfly_setup;
   pgm->teardown       = butterfly_teardown;
   pgm->flag = 0;
